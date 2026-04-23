@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 
@@ -6,16 +7,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// память (история проверок)
-const history = [];
+/* =========================
+   MONGODB
+========================= */
+mongoose.connect("mongodb+srv://andforeyou_db_user:2AUBwGXbVK6qaexa@cluster0.dmetv8x.mongodb.net/imei")
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
 
-// TEST
+/* =========================
+   MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+  deviceId: String,
+  status: String,
+  time: String
+});
+
+const Check = mongoose.model("Check", CheckSchema);
+
+/* =========================
+   ROOT (FIX)
+========================= */
 app.get("/", (req, res) => {
   res.send("API is working 🚀");
 });
 
-// CHECK IMEI
-app.post("/check", (req, res) => {
+/* =========================
+   CHECK IMEI
+========================= */
+app.post("/check", async (req, res) => {
   const { deviceId } = req.body;
 
   if (!deviceId) {
@@ -28,28 +48,3 @@ app.post("/check", (req, res) => {
 
   if (last === "0") status = "blocked";
   else if (last === "5") status = "clean";
-
-  const result = {
-    deviceId,
-    status,
-    time: new Date().toISOString()
-  };
-
-  history.push(result);
-
-  console.log("CHECK:", result);
-
-  res.json(result);
-});
-
-// HISTORY
-app.get("/history", (req, res) => {
-  res.json(history);
-});
-
-// ВАЖНО ДЛЯ DEPLOY
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});

@@ -73,6 +73,8 @@ th, td {
 </style>
 
 <script>
+const API_URL = "https://imei-info.onrender.com"; // твой сервер
+
 async function check() {
   const imei = document.getElementById("imei").value;
   const resultEl = document.getElementById("resultCard");
@@ -84,7 +86,7 @@ async function check() {
   try {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const res = await fetch("http://localhost:3000/check", {
+    const res = await fetch(API_URL + "/check", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -111,7 +113,6 @@ async function check() {
     else if (data.status === "blocked") resultEl.style.color = "red";
     else resultEl.style.color = "black";
 
-    // обновляем историю после проверки
     loadHistory();
 
   } catch (err) {
@@ -122,11 +123,10 @@ async function check() {
   }
 }
 
-// ЗАГРУЗКА ИСТОРИИ
 async function loadHistory() {
   const table = document.getElementById("table");
 
-  const res = await fetch("http://localhost:3000/history");
+  const res = await fetch(API_URL + "/history");
   const data = await res.json();
 
   table.innerHTML = `
