@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>IMEI TEST</title>
+</head>
+
+<body style="font-family: Arial; text-align: center; margin-top: 100px;">
+
+<h2>IMEI TEST</h2>
+
+<input id="imei" placeholder="enter imei"
+style="padding:10px; width:250px; font-size:16px;" />
+
+<button onclick="check()"
+style="padding:10px 20px; font-size:16px; margin-left:10px;">
+Check
+</button>
+
+<!-- SPINNER -->
+<div id="spinner" style="display:none; margin-top:15px;">
+  <div style="
+    width:30px;
+    height:30px;
+    border:4px solid #ccc;
+    border-top:4px solid #333;
+    border-radius:50%;
+    margin:0 auto;
+    animation: spin 1s linear infinite;
+  "></div>
+</div>
+
+<!-- RESULT CARD -->
+<div id="resultCard" style="
+  display:none;
+  margin-top:20px;
+  padding:15px;
+  border-radius:10px;
+  width:320px;
+  margin-left:auto;
+  margin-right:auto;
+  background:#f5f5f5;
+  font-size:18px;
+"></div>
+
+<!-- HISTORY -->
+<h3 style="margin-top:40px;">History</h3>
+
+<button onclick="loadHistory()"
+style="padding:8px 15px; margin-bottom:10px;">
+Refresh
+</button>
+
+<table id="table" style="
+  margin:0 auto;
+  border-collapse: collapse;
+  width:80%;
+"></table>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+}
+
+th, td {
+  padding: 8px;
+}
+</style>
+
+<script>
+async function check() {
+  const imei = document.getElementById("imei").value;
+  const resultEl = document.getElementById("resultCard");
+  const spinner = document.getElementById("spinner");
+
+  resultEl.style.display = "none";
+  spinner.style.display = "block";
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const res = await fetch("http://localhost:3000/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ deviceId: imei })
+    });
+
+    const data = await res.json();
+
+    spinner.style.display = "none";
+    resultEl.style.display = "block";
+
+    let statusText = "";
+
+    if (data.status === "pending") statusText = "⏳ Pending";
+    else if (data.status === "clean") statusText = "✅ Clean";
+    else if (data.status === "blocked") statusText = "❌ Blocked";
+    else statusText = data.status;
+
+    resultEl.innerText = "IMEI result → " + statusText;
+
+    if (data.status === "pending") resultEl.style.color = "orange";
+    else if (data.status === "clean") resultEl.style.color = "green";
+    else if (data.status === "blocked") resultEl.style.color = "red";
+    else resultEl.style.color = "black";
+
+    // обновляем историю после проверки
+    loadHistory();
+
+  } catch (err) {
+    spinner.style.display = "none";
+    resultEl.style.display = "block";
+    resultEl.innerText = "Server error";
+    resultEl.style.color = "red";
+  }
+}
+
+// ЗАГРУЗКА ИСТОРИИ
+async function loadHistory() {
+  const table = document.getElementById("table");
+
+  const res = await fetch("http://localhost:3000/history");
+  const data = await res.json();
+
+  table.innerHTML = `
+    <tr>
+      <th>IMEI</th>
+      <th>Status</th>
+      <th>Time</th>
+    </tr>
+  `;
+
+  data.slice().reverse().forEach(item => {
+    table.innerHTML += `
+      <tr>
+        <td>${item.deviceId}</td>
+        <td>${item.status}</td>
+        <td>${item.time}</td>
+      </tr>
+    `;
+  });
+}
+</script>
+
+</body>
+</html>
