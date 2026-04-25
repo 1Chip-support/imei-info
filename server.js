@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 const app = express();
 
@@ -41,6 +42,36 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
+   STRIPE PAYMENT
+========================= */
+app.post("/create-payment", async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: "IMEI Check"
+          },
+          unit_amount: 199
+        },
+        quantity: 1
+      }],
+      mode: "payment",
+      success_url: "https://chipper-cobbler-62c70c.netlify.app?paid=1",
+      cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
+    });
+
+    res.json({ url: session.url });
+
+  } catch (err) {
+    console.log("STRIPE ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
    CREATE REQUEST
 ========================= */
 app.post("/check", async (req, res) => {
@@ -48,7 +79,7 @@ app.post("/check", async (req, res) => {
     const { deviceId } = req.body;
 
     if (!deviceId) {
-      return res.status(400).json({ status: "error", message: "No IMEI" });
+      return res.status(400).json({ status: "error" });
     }
 
     const last = deviceId.slice(-1);
@@ -64,7 +95,6 @@ app.post("/check", async (req, res) => {
       price: 1.99
     });
 
-    // 💡 ВАЖНО: теперь ВСЕГДА отдаём цену с базы
     res.json({
       id: request._id,
       deviceId: request.deviceId,
@@ -80,20 +110,19 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
-   GET ALL REQUESTS (ADMIN)
+   HISTORY
 ========================= */
 app.get("/history", async (req, res) => {
   try {
     const data = await Check.find().sort({ _id: -1 });
     res.json(data);
   } catch (err) {
-    console.log("HISTORY ERROR:", err);
     res.status(500).json([]);
   }
 });
 
 /* =========================
-   ANSWER REQUEST (ADMIN)
+   ANSWER
 ========================= */
 app.post("/answer", async (req, res) => {
   try {
@@ -107,7 +136,6 @@ app.post("/answer", async (req, res) => {
     res.json({ ok: true });
 
   } catch (err) {
-    console.log("ANSWER ERROR:", err);
     res.status(500).json({ ok: false });
   }
 });
