@@ -29,6 +29,7 @@ const CheckSchema = new mongoose.Schema({
   status: { type: String, default: "pending" },
   price: { type: Number, default: 1.99 },
   answer: { type: String, default: "" },
+  paid: { type: Boolean, default: false },
   time: { type: Date, default: Date.now }
 });
 
@@ -72,14 +73,19 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-   CHECK IMEI
+   CHECK IMEI (PROTECTED)
 ========================= */
 app.post("/check", async (req, res) => {
   try {
-    const { deviceId } = req.body;
+    const { deviceId, paid } = req.body;
 
     if (!deviceId) {
       return res.status(400).json({ status: "error" });
+    }
+
+    // 🔒 защита оплаты
+    if (!paid) {
+      return res.status(403).json({ status: "payment_required" });
     }
 
     const last = deviceId.slice(-1);
@@ -92,7 +98,8 @@ app.post("/check", async (req, res) => {
     const request = await Check.create({
       deviceId,
       status,
-      price: 1.99
+      price: 1.99,
+      paid: true
     });
 
     res.json({
