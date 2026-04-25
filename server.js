@@ -6,87 +6,12 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
 const app = express();
 
 /* =========================
-   RAW BODY (Stripe webhook)
+   MIDDLEWARE
 ========================= */
-app.use("/stripe-webhook", express.raw({ type: "application/json" }));
-
 app.use(cors());
 app.use(express.json());
 
-/* =========================
-   MONGODB
-========================= */
-const mongoURL = process.env.MONGO_URL;
-
-if (!mongoURL) {
-  console.log("❌ MONGO_URL missing");
-} else {
-  mongoose.connect(mongoURL)
-    .then(() => console.log("MongoDB connected"))
-    .catch(err => console.log("MongoDB error:", err));
-}
-
-/* =========================
-   MODEL
-========================= */
-const CheckSchema = new mongoose.Schema({
-  deviceId: { type: String, required: true },
-  status: { type: String, default: "pending" },
-  price: { type: Number, default: 1.99 },
-  answer: { type: String, default: "" },
-  paid: { type: Boolean, default: false },
-  time: { type: Date, default: Date.now }
-});
-
-const Check = mongoose.model("Check", CheckSchema);
-
-/* =========================
-   ROOT
-========================= */
-app.get("/", (req, res) => {
-  res.send("API is working 🚀");
-});
-
-/* =========================
-   STRIPE PAYMENT
-========================= */
-app.post("/create-payment", async (req, res) => {
-  try {
-    const { deviceId } = req.body;
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "IMEI Check"
-          },
-          unit_amount: 199
-        },
-        quantity: 1
-      }],
-      mode: "payment",
-
-      metadata: {
-        deviceId: deviceId || "unknown"
-      },
-
-      success_url: "https://chipper-cobbler-62c70c.netlify.app",
-      cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
-    });
-
-    res.json({ url: session.url });
-
-  } catch (err) {
-    console.log("STRIPE ERROR:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/* =========================
-   STRIPE WEBHOOK
-========================= */
+/* Stripe webhook MUST be raw */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
@@ -95,16 +20,22 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-
       const deviceId = session.metadata?.deviceId;
 
       if (deviceId) {
-        await Check.create({
-          deviceId,
-          status: "paid",
-          paid: true,
-          price: 1.99
-        });
+        await Check.updateOne(
+          { deviceId },
+          {
+            $set: {
+              deviceId,
+              paid: true,
+              status: "paid",
+              price: 1.99,
+              time: new Date()
+            }
+          },
+          { upsert: true }
+        );
 
         console.log("PAYMENT SAVED:", deviceId);
       }
@@ -119,15 +50,74 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
 });
 
 /* =========================
-   CHECK IMEI (PROTECTED)
+   MONGODB
+========================= */
+const mongoURL = process.env.MONGO_URL;
+
+mongoose.connect(mongoURL)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
+
+/* =========================
+   MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+  deviceId: String,
+  status: String,
+  price: Number,
+  paid: Boolean,
+  time: Date
+});
+
+const Check = mongoose.model("Check", CheckSchema);
+
+/* =========================
+   ROOT
+========================= */
+app.get("/", (req, res) => {
+  res.send("API is working 🚀");
+});
+
+/* =========================
+   CREATE PAYMENT
+========================= */
+app.post("/create-payment", async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: { name: "IMEI Check" },
+          unit_amount: 199
+        },
+        quantity: 1
+      }],
+
+      metadata: { deviceId },
+
+      success_url: "https://chipper-cobbler-62c70c.netlify.app",
+      cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
+    });
+
+    res.json({ url: session.url });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   CHECK (SECURE)
 ========================= */
 app.post("/check", async (req, res) => {
   try {
     const { deviceId } = req.body;
-
-    if (!deviceId) {
-      return res.status(400).json({ status: "error" });
-    }
 
     const payment = await Check.findOne({ deviceId, paid: true });
 
@@ -136,14 +126,12 @@ app.post("/check", async (req, res) => {
     }
 
     return res.json({
-      id: payment._id,
       deviceId,
-      status: payment.status,
-      paid: true
+      status: payment.status
     });
 
   } catch (err) {
-    console.log("CHECK ERROR:", err);
+    console.log(err);
     res.status(500).json({ status: "server_error" });
   }
 });
