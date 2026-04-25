@@ -7,35 +7,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
-MIDDLEWARE (IMPORTANT)
-========================= */
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-/* =========================
-MONGODB
-========================= */
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log("MongoDB error:", err));
-
-/* =========================
-MODEL
-========================= */
-const CheckSchema = new mongoose.Schema({
-  deviceId: { type: String, index: true },
-  status: { type: String, default: "pending" },
-  price: { type: Number, default: 1.99 },
-  paid: { type: Boolean, default: false },
-  time: { type: Date, default: Date.now }
-});
-
-const Check = mongoose.model("Check", CheckSchema);
-
-/* =========================
-WEBHOOK (MUST BE BEFORE JSON)
+WEBHOOK (ДОЛЖЕН БЫТЬ ПЕРВЫМ)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
@@ -64,7 +36,7 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
           { upsert: true }
         );
 
-        console.log("💰 SAVED PAYMENT");
+        console.log("💰 PAYMENT SAVED");
       }
     }
 
@@ -75,6 +47,34 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
     res.status(400).send("Webhook error");
   }
 });
+
+/* =========================
+MIDDLEWARE
+========================= */
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+/* =========================
+MONGODB
+========================= */
+mongoose.connect(process.env.MONGO_URL)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
+
+/* =========================
+MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+  deviceId: { type: String, unique: true }, // 🔥 важно
+  status: { type: String, default: "pending" },
+  price: { type: Number, default: 1.99 },
+  paid: { type: Boolean, default: false },
+  time: { type: Date, default: Date.now }
+});
+
+const Check = mongoose.model("Check", CheckSchema);
 
 /* =========================
 CREATE PAYMENT
@@ -111,7 +111,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-CHECK IMEI (IMPORTANT FIX)
+CHECK (БЕЗ ДУБЛИКАТОВ)
 ========================= */
 app.post("/check", async (req, res) => {
   try {
@@ -121,17 +121,23 @@ app.post("/check", async (req, res) => {
       return res.status(400).json({ error: "deviceId missing" });
     }
 
-    // 🔥 создаём запись ВСЕГДА
-    await Check.create({
-      deviceId,
-      status: "pending",
-      paid: false,
-      time: new Date()
-    });
+    // 🔥 НЕ создаём дубликаты
+    await Check.updateOne(
+      { deviceId },
+      {
+        $setOnInsert: {
+          deviceId,
+          status: "pending",
+          paid: false,
+          time: new Date()
+        }
+      },
+      { upsert: true }
+    );
 
-    const payment = await Check.findOne({ deviceId, paid: true });
+    const payment = await Check.findOne({ deviceId });
 
-    if (!payment) {
+    if (!payment.paid) {
       return res.status(403).json({ status: "payment_required" });
     }
 
