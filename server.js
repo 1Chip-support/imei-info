@@ -2,50 +2,66 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 
 /* =========================
- MIDDLEWARE
+MIDDLEWARE
 ========================= */
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // ✅ ВАЖНО (фикс формы)
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 /* =========================
- SIMPLE ADMIN AUTH
+ADMIN AUTH (COOKIE)
 ========================= */
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Albatros1985";
-let adminLogged = false;
 
-/* =========================
- LOGIN
-========================= */
+/* LOGIN */
 app.post("/admin/login", (req, res) => {
-  const user = req.body.user;
-  const pass = req.body.pass;
+  const { user, pass } = req.body;
 
   if (user === ADMIN_USER && pass === ADMIN_PASS) {
-    adminLogged = true;
-
-    // 👉 редирект в админку
+    res.cookie("admin", "yes", { httpOnly: true });
     return res.redirect("/admin");
   }
 
   res.send("❌ Wrong login");
 });
 
-/* =========================
- LOGOUT
-========================= */
+/* LOGOUT */
 app.get("/admin/logout", (req, res) => {
-  adminLogged = false;
+  res.clearCookie("admin");
   res.redirect("/admin");
 });
 
 /* =========================
- STRIPE WEBHOOK
+MONGODB
+========================= */
+const mongoURL = process.env.MONGO_URL;
+
+mongoose.connect(mongoURL)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
+
+/* =========================
+MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+  deviceId: String,
+  status: String,
+  price: Number,
+  paid: Boolean,
+  time: Date
+});
+
+const Check = mongoose.model("Check", CheckSchema);
+
+/* =========================
+STRIPE WEBHOOK
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
@@ -83,36 +99,14 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
 });
 
 /* =========================
- MONGODB
-========================= */
-const mongoURL = process.env.MONGO_URL;
-
-mongoose.connect(mongoURL)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log("MongoDB error:", err));
-
-/* =========================
- MODEL
-========================= */
-const CheckSchema = new mongoose.Schema({
-  deviceId: String,
-  status: String,
-  price: Number,
-  paid: Boolean,
-  time: Date
-});
-
-const Check = mongoose.model("Check", CheckSchema);
-
-/* =========================
- ROOT
+ROOT
 ========================= */
 app.get("/", (req, res) => {
   res.send("API is working 🚀");
 });
 
 /* =========================
- CREATE PAYMENT
+CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
   try {
@@ -142,7 +136,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
- CHECK IMEI
+CHECK IMEI
 ========================= */
 app.post("/check", async (req, res) => {
   try {
@@ -165,18 +159,23 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
- HISTORY
+DELETE (ADMIN)
 ========================= */
-app.get("/history", async (req, res) => {
-  const data = await Check.find().sort({ _id: -1 });
-  res.json(data);
+app.get("/admin/delete/:id", async (req, res) => {
+  if (req.cookies.admin !== "yes") {
+    return res.send("❌ Not allowed");
+  }
+
+  await Check.findByIdAndDelete(req.params.id);
+  res.redirect("/admin");
 });
 
 /* =========================
- ADMIN PANEL
+ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
-  if (!adminLogged) {
+
+  if (req.cookies.admin !== "yes") {
     return res.send(`
       <h2>Admin Login</h2>
       <form method="post" action="/admin/login">
@@ -187,12 +186,13 @@ app.get("/admin", async (req, res) => {
     `);
   }
 
-  const data = await Check.find().sort({ _id: -1 });
+  // ✅ ТОЛЬКО ОПЛАЧЕННЫЕ
+  const data = await Check.find({ paid: true }).sort({ _id: -1 });
 
   res.send(`
     <html>
     <body style="background:#111;color:#fff;font-family:Arial;padding:20px;">
-      <h1>📊 ADMIN PANEL</h1>
+      <h1>💰 PAID ORDERS</h1>
 
       <a href="/admin/logout" style="color:red;">Logout</a>
 
@@ -201,7 +201,8 @@ app.get("/admin", async (req, res) => {
           <b>IMEI:</b> ${i.deviceId}<br/>
           <b>Status:</b> ${i.status}<br/>
           <b>Paid:</b> ${i.paid}<br/>
-          <b>Time:</b> ${i.time}
+          <b>Time:</b> ${i.time}<br/>
+          <a href="/admin/delete/${i._id}" style="color:red;">🗑 Delete</a>
         </div>
       `).join("")}
 
@@ -211,7 +212,7 @@ app.get("/admin", async (req, res) => {
 });
 
 /* =========================
- START
+START
 ========================= */
 const PORT = process.env.PORT || 3000;
 
