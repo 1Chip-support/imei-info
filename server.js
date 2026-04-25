@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
 
 const app = express();
 
@@ -72,7 +72,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-   CREATE REQUEST
+   CHECK IMEI
 ========================= */
 app.post("/check", async (req, res) => {
   try {
@@ -97,8 +97,8 @@ app.post("/check", async (req, res) => {
 
     res.json({
       id: request._id,
-      deviceId: request.deviceId,
-      status: request.status,
+      deviceId,
+      status,
       price: request.price,
       time: request.time
     });
@@ -113,12 +113,8 @@ app.post("/check", async (req, res) => {
    HISTORY
 ========================= */
 app.get("/history", async (req, res) => {
-  try {
-    const data = await Check.find().sort({ _id: -1 });
-    res.json(data);
-  } catch (err) {
-    res.status(500).json([]);
-  }
+  const data = await Check.find().sort({ _id: -1 });
+  res.json(data);
 });
 
 /* =========================
