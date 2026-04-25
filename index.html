@@ -16,9 +16,16 @@
 <input id="imei" placeholder="enter imei"
 style="padding:10px; width:250px; font-size:16px;" />
 
+<!-- CHECK BUTTON -->
 <button onclick="check()"
 style="padding:10px 20px; font-size:16px; margin-left:10px;">
 Check
+</button>
+
+<!-- PAY BUTTON -->
+<button onclick="pay()"
+style="padding:10px 20px; font-size:16px; margin-left:10px; background:green; color:white;">
+Pay $1.99
 </button>
 
 <!-- SPINNER -->
@@ -78,6 +85,35 @@ th, td {
 <script>
 const API_URL = "https://imei-info.onrender.com";
 
+/* =========================
+   PAYMENT (NEW)
+========================= */
+async function pay() {
+  const imei = document.getElementById("imei").value;
+
+  if (!imei) {
+    alert("Enter IMEI first");
+    return;
+  }
+
+  const res = await fetch(API_URL + "/create-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId: imei })
+  });
+
+  const data = await res.json();
+
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert("Payment error");
+  }
+}
+
+/* =========================
+   CHECK
+========================= */
 async function check() {
   const imei = document.getElementById("imei").value;
   const resultEl = document.getElementById("resultCard");
@@ -112,7 +148,7 @@ async function check() {
 
     resultEl.innerHTML = `
       IMEI result → <b>${statusText}</b><br>
-      Price: <b>$${data.price || "1.99"}</b>
+      Price: <b>$1.99</b>
     `;
 
     resultEl.style.color = color;
@@ -127,6 +163,9 @@ async function check() {
   }
 }
 
+/* =========================
+   HISTORY
+========================= */
 async function loadHistory() {
   const table = document.getElementById("table");
 
