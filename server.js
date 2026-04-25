@@ -12,12 +12,12 @@ app.use(express.json());
 ========================= */
 const mongoURL = process.env.MONGO_URL;
 
-if (!mongoURL) {
-  console.log("❌ MONGO_URL missing");
-} else {
+if (mongoURL) {
   mongoose.connect(mongoURL)
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.log("MongoDB error:", err));
+} else {
+  console.log("❌ MONGO_URL missing");
 }
 
 /* =========================
@@ -25,10 +25,8 @@ if (!mongoURL) {
 ========================= */
 const CheckSchema = new mongoose.Schema({
   deviceId: String,
-  status: { type: String, default: "pending" },
-  answer: { type: String, default: "" },
-  price: { type: Number, default: 1.99 },   // 💰 ДОБАВИЛ ЦЕНУ
-  time: { type: Date, default: Date.now }
+  status: String,
+  time: String
 });
 
 const Check = mongoose.model("Check", CheckSchema);
@@ -41,9 +39,9 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   CREATE REQUEST
+   CHECK IMEI
 ========================= */
-app.post("/request", async (req, res) => {
+app.post("/check", async (req, res) => {
   try {
     const { deviceId } = req.body;
 
@@ -51,52 +49,44 @@ app.post("/request", async (req, res) => {
       return res.json({ status: "error" });
     }
 
-    const request = await Check.create({
-      deviceId,
-      status: "pending"
-    });
+    let status = "pending";
 
-    res.json({
-      status: "created",
-      id: request._id,
-      price: 1.99   // 💰 ВОЗВРАЩАЕМ ЦЕНУ НА FRONTEND
-    });
+    const last = deviceId.slice(-1);
+
+    if (last === "0") status = "blocked";
+    else if (last === "5") status = "clean";
+
+    const result = {
+      deviceId,
+      status,
+      time: new Date().toISOString()
+    };
+
+    if (mongoURL) {
+      await Check.create(result);
+    }
+
+    res.json(result);
 
   } catch (err) {
-    console.log("REQUEST ERROR:", err);
+    console.log("CHECK ERROR:", err);
     res.status(500).json({ status: "server_error" });
   }
 });
 
 /* =========================
-   ADMIN: GET REQUESTS
+   HISTORY
 ========================= */
-app.get("/requests", async (req, res) => {
+app.get("/history", async (req, res) => {
   try {
+    if (!mongoURL) return res.json([]);
+
     const data = await Check.find().sort({ _id: -1 });
     res.json(data);
+
   } catch (err) {
+    console.log("HISTORY ERROR:", err);
     res.status(500).json([]);
-  }
-});
-
-/* =========================
-   ADMIN: ANSWER
-========================= */
-app.post("/answer", async (req, res) => {
-  try {
-    const { id, answer } = req.body;
-
-    await Check.findByIdAndUpdate(id, {
-      status: "done",
-      answer
-    });
-
-    res.json({ ok: true });
-
-  } catch (err) {
-    console.log("ANSWER ERROR:", err);
-    res.status(500).json({ ok: false });
   }
 });
 
