@@ -6,7 +6,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
 const app = express();
 
 /* =========================
-   RAW BODY (для webhook)
+   RAW BODY (Stripe webhook)
 ========================= */
 app.use("/stripe-webhook", express.raw({ type: "application/json" }));
 
@@ -68,9 +68,8 @@ app.post("/create-payment", async (req, res) => {
       }],
       mode: "payment",
 
-      // передаём deviceId в Stripe
       metadata: {
-        deviceId
+        deviceId: deviceId || "unknown"
       },
 
       success_url: "https://chipper-cobbler-62c70c.netlify.app",
@@ -86,16 +85,18 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-   STRIPE WEBHOOK (PRO LEVEL)
+   STRIPE WEBHOOK
 ========================= */
-app.post("/stripe-webhook", async (req, res) => {
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
+
+    console.log("WEBHOOK:", event.type);
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
-      const deviceId = session.metadata.deviceId;
+      const deviceId = session.metadata?.deviceId;
 
       if (deviceId) {
         await Check.create({
@@ -110,6 +111,7 @@ app.post("/stripe-webhook", async (req, res) => {
     }
 
     res.json({ received: true });
+
   } catch (err) {
     console.log("WEBHOOK ERROR:", err);
     res.status(400).send("Webhook error");
@@ -127,33 +129,17 @@ app.post("/check", async (req, res) => {
       return res.status(400).json({ status: "error" });
     }
 
-    // 🔒 проверяем оплату в базе
     const payment = await Check.findOne({ deviceId, paid: true });
 
     if (!payment) {
       return res.status(403).json({ status: "payment_required" });
     }
 
-    const last = deviceId.slice(-1);
-
-    let status = "pending";
-
-    if (last === "0") status = "blocked";
-    else if (last === "5") status = "clean";
-
-    const request = await Check.create({
+    return res.json({
+      id: payment._id,
       deviceId,
-      status,
-      price: 1.99,
+      status: payment.status,
       paid: true
-    });
-
-    res.json({
-      id: request._id,
-      deviceId,
-      status,
-      price: request.price,
-      time: request.time
     });
 
   } catch (err) {
