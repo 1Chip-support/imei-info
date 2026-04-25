@@ -5,6 +5,11 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
 
 const app = express();
 
+/* =========================
+   RAW BODY (для webhook)
+========================= */
+app.use("/stripe-webhook", express.raw({ type: "application/json" }));
+
 app.use(cors());
 app.use(express.json());
 
@@ -47,6 +52,8 @@ app.get("/", (req, res) => {
 ========================= */
 app.post("/create-payment", async (req, res) => {
   try {
+    const { deviceId } = req.body;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [{
@@ -60,7 +67,13 @@ app.post("/create-payment", async (req, res) => {
         quantity: 1
       }],
       mode: "payment",
-      success_url: "https://chipper-cobbler-62c70c.netlify.app?paid=1",
+
+      // передаём deviceId в Stripe
+      metadata: {
+        deviceId
+      },
+
+      success_url: "https://chipper-cobbler-62c70c.netlify.app",
       cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
     });
 
@@ -73,18 +86,51 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
+   STRIPE WEBHOOK (PRO LEVEL)
+========================= */
+app.post("/stripe-webhook", async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const deviceId = session.metadata.deviceId;
+
+      if (deviceId) {
+        await Check.create({
+          deviceId,
+          status: "paid",
+          paid: true,
+          price: 1.99
+        });
+
+        console.log("PAYMENT SAVED:", deviceId);
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err);
+    res.status(400).send("Webhook error");
+  }
+});
+
+/* =========================
    CHECK IMEI (PROTECTED)
 ========================= */
 app.post("/check", async (req, res) => {
   try {
-    const { deviceId, paid } = req.body;
+    const { deviceId } = req.body;
 
     if (!deviceId) {
       return res.status(400).json({ status: "error" });
     }
 
-    // 🔒 защита оплаты
-    if (!paid) {
+    // 🔒 проверяем оплату в базе
+    const payment = await Check.findOne({ deviceId, paid: true });
+
+    if (!payment) {
       return res.status(403).json({ status: "payment_required" });
     }
 
