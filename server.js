@@ -7,6 +7,48 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
+WEBHOOK (MUST BE FIRST ROUTE)
+========================= */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    console.log("🔥 WEBHOOK HIT:", event.type);
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const deviceId = session.metadata?.deviceId;
+
+      console.log("📦 DEVICE:", deviceId);
+
+      if (!deviceId) return res.json({ ok: true });
+
+      await Check.updateOne(
+        { deviceId },
+        {
+          $set: {
+            deviceId,
+            paid: true,
+            status: "paid",
+            price: 1.99,
+            time: new Date()
+          }
+        },
+        { upsert: true }
+      );
+
+      console.log("💰 SAVED TO DB");
+    }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err.message);
+    res.status(400).send("Webhook error");
+  }
+});
+
+/* =========================
 MIDDLEWARE
 ========================= */
 app.use(cors());
@@ -33,48 +75,6 @@ const CheckSchema = new mongoose.Schema({
 });
 
 const Check = mongoose.model("Check", CheckSchema);
-
-/* =========================
-STRIPE WEBHOOK (FIXED)
-========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const event = JSON.parse(req.body.toString());
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const deviceId = session.metadata?.deviceId;
-
-      console.log("🔥 WEBHOOK HIT:", deviceId);
-
-      if (!deviceId) {
-        return res.json({ ok: true });
-      }
-
-      const result = await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            paid: true,
-            status: "paid",
-            price: 1.99,
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
-
-      console.log("💰 SAVED:", result);
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.log("WEBHOOK ERROR:", err.message);
-    res.status(400).send("Webhook error");
-  }
-});
 
 /* =========================
 CREATE PAYMENT
@@ -131,28 +131,26 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
-ADMIN PANEL (ONLY PAID)
+ADMIN PANEL (ALL DATA)
 ========================= */
 app.get("/admin", async (req, res) => {
-  const data = await Check.find({ paid: true }).sort({ _id: -1 });
+  const data = await Check.find().sort({ _id: -1 });
 
   res.send(`
     <html>
     <body style="font-family:Arial;background:#111;color:#fff;padding:20px;">
 
-      <h1>💰 PAID ORDERS</h1>
-
-      <a href="/admin/clear" style="color:red;">🧹 CLEAR ALL</a>
+      <h1>📊 ADMIN PANEL</h1>
 
       <hr/>
 
-      ${data.length === 0 ? "<p>No paid orders yet</p>" : ""}
+      ${data.length === 0 ? "<p>No data yet</p>" : ""}
 
       ${data.map(i => `
         <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
           <b>IMEI:</b> ${i.deviceId}<br/>
           <b>Status:</b> ${i.status}<br/>
-          <b>Paid:</b> ${i.paid}<br/>
+          <b>Paid:</b> ${i.paid ? "YES" : "NO"}<br/>
           <b>Time:</b> ${new Date(i.time).toLocaleString()}<br/>
 
           <a href="/admin/delete/${i._id}" style="color:red;">🗑 DELETE</a>
@@ -169,14 +167,6 @@ DELETE ONE
 ========================= */
 app.get("/admin/delete/:id", async (req, res) => {
   await Check.findByIdAndDelete(req.params.id);
-  res.redirect("/admin");
-});
-
-/* =========================
-CLEAR ALL PAID
-========================= */
-app.get("/admin/clear", async (req, res) => {
-  await Check.deleteMany({ paid: true });
   res.redirect("/admin");
 });
 
