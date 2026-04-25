@@ -7,49 +7,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
-WEBHOOK (MUST BE FIRST ROUTE)
-========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const event = JSON.parse(req.body.toString());
-
-    console.log("🔥 WEBHOOK HIT:", event.type);
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const deviceId = session.metadata?.deviceId;
-
-      console.log("📦 DEVICE:", deviceId);
-
-      if (!deviceId) return res.json({ ok: true });
-
-      await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            paid: true,
-            status: "paid",
-            price: 1.99,
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
-
-      console.log("💰 SAVED TO DB");
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.log("WEBHOOK ERROR:", err.message);
-    res.status(400).send("Webhook error");
-  }
-});
-
-/* =========================
-MIDDLEWARE
+MIDDLEWARE (IMPORTANT)
 ========================= */
 app.use(cors());
 app.use(express.json());
@@ -75,6 +33,48 @@ const CheckSchema = new mongoose.Schema({
 });
 
 const Check = mongoose.model("Check", CheckSchema);
+
+/* =========================
+WEBHOOK (MUST BE BEFORE JSON)
+========================= */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    console.log("🔥 WEBHOOK:", event.type);
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const deviceId = session.metadata?.deviceId;
+
+      console.log("📦 DEVICE:", deviceId);
+
+      if (deviceId) {
+        await Check.updateOne(
+          { deviceId },
+          {
+            $set: {
+              deviceId,
+              paid: true,
+              status: "paid",
+              price: 1.99,
+              time: new Date()
+            }
+          },
+          { upsert: true }
+        );
+
+        console.log("💰 SAVED PAYMENT");
+      }
+    }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err.message);
+    res.status(400).send("Webhook error");
+  }
+});
 
 /* =========================
 CREATE PAYMENT
@@ -111,11 +111,23 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-CHECK IMEI
+CHECK IMEI (IMPORTANT FIX)
 ========================= */
 app.post("/check", async (req, res) => {
   try {
     const { deviceId } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId missing" });
+    }
+
+    // 🔥 создаём запись ВСЕГДА
+    await Check.create({
+      deviceId,
+      status: "pending",
+      paid: false,
+      time: new Date()
+    });
 
     const payment = await Check.findOne({ deviceId, paid: true });
 
@@ -126,12 +138,13 @@ app.post("/check", async (req, res) => {
     res.json(payment);
 
   } catch (err) {
+    console.log(err);
     res.status(500).json({ status: "server_error" });
   }
 });
 
 /* =========================
-ADMIN PANEL (ALL DATA)
+ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
   const data = await Check.find().sort({ _id: -1 });
@@ -163,7 +176,7 @@ app.get("/admin", async (req, res) => {
 });
 
 /* =========================
-DELETE ONE
+DELETE
 ========================= */
 app.get("/admin/delete/:id", async (req, res) => {
   await Check.findByIdAndDelete(req.params.id);
@@ -173,4 +186,5 @@ app.get("/admin/delete/:id", async (req, res) => {
 /* =========================
 START
 ========================= */
-app.listen(3000, () => console.log("RUNNING"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("RUNNING ON", PORT));
