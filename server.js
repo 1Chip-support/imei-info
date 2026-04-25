@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
@@ -26,7 +24,6 @@ MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
   deviceId: { type: String, unique: true },
-  email: { type: String },
   status: { type: String, default: "pending" },
   price: { type: Number, default: 1.99 },
   paid: { type: Boolean, default: false },
@@ -50,7 +47,6 @@ async (req, res) => {
       const session = event.data.object;
 
       const deviceId = session.metadata?.deviceId;
-      const email = session.metadata?.email;
 
       if (!deviceId) return res.json({ ok: true });
 
@@ -59,7 +55,6 @@ async (req, res) => {
         {
           $set: {
             deviceId,
-            email,
             paid: true,
             status: "paid",
             price: 1.99,
@@ -69,7 +64,7 @@ async (req, res) => {
         { upsert: true }
       );
 
-      console.log("💰 PAYMENT SAVED:", deviceId, email);
+      console.log("💰 PAYMENT SAVED:", deviceId);
     }
 
     res.json({ received: true });
@@ -91,10 +86,10 @@ CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
   try {
-    const { deviceId, email } = req.body;
+    const { deviceId } = req.body;
 
-    if (!deviceId || !email) {
-      return res.status(400).json({ error: "deviceId or email missing" });
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId missing" });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -108,7 +103,7 @@ app.post("/create-payment", async (req, res) => {
         },
         quantity: 1
       }],
-      metadata: { deviceId, email },
+      metadata: { deviceId },
       success_url: "https://imei-info.pages.dev",
       cancel_url: "https://imei-info.pages.dev"
     });
@@ -161,7 +156,6 @@ app.get("/admin", async (req, res) => {
       ${data.map(i => `
         <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
           <b>IMEI:</b> ${i.deviceId}<br/>
-          <b>Email:</b> ${i.email || "—"}<br/>
           <b>Status:</b> ${i.status}<br/>
           <b>Paid:</b> ${i.paid ? "YES" : "NO"}<br/>
           <b>Time:</b> ${new Date(i.time).toLocaleString()}<br/>
