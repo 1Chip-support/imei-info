@@ -5,9 +5,13 @@
   "scripts": {
     "start": "node server.js"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^4.22.1",
-    "mongoose": "^8.23.1"
+    "mongoose": "^8.23.1",
+    "stripe": "^22.1.0"
   }
 }
