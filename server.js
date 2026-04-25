@@ -12,21 +12,23 @@ app.use(express.json());
 ========================= */
 const mongoURL = process.env.MONGO_URL;
 
-if (mongoURL) {
+if (!mongoURL) {
+  console.log("❌ MONGO_URL missing");
+} else {
   mongoose.connect(mongoURL)
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.log("MongoDB error:", err));
-} else {
-  console.log("❌ MONGO_URL missing");
 }
 
 /* =========================
    MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
-  deviceId: String,
-  status: String,
-  time: String
+  deviceId: { type: String, required: true },
+  status: { type: String, default: "pending" },
+  price: { type: Number, default: 1.99 }, // 💰 цена
+  answer: { type: String, default: "" },   // ответ админа
+  time: { type: Date, default: Date.now }
 });
 
 const Check = mongoose.model("Check", CheckSchema);
@@ -39,62 +41,13 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   CHECK IMEI
+   CREATE REQUEST
 ========================= */
 app.post("/check", async (req, res) => {
   try {
     const { deviceId } = req.body;
 
     if (!deviceId) {
-      return res.json({ status: "error" });
+      return res.status(400).json({ status: "error" });
     }
 
-    let status = "pending";
-
-    const last = deviceId.slice(-1);
-
-    if (last === "0") status = "blocked";
-    else if (last === "5") status = "clean";
-
-    const result = {
-      deviceId,
-      status,
-      time: new Date().toISOString()
-    };
-
-    if (mongoURL) {
-      await Check.create(result);
-    }
-
-    res.json(result);
-
-  } catch (err) {
-    console.log("CHECK ERROR:", err);
-    res.status(500).json({ status: "server_error" });
-  }
-});
-
-/* =========================
-   HISTORY
-========================= */
-app.get("/history", async (req, res) => {
-  try {
-    if (!mongoURL) return res.json([]);
-
-    const data = await Check.find().sort({ _id: -1 });
-    res.json(data);
-
-  } catch (err) {
-    console.log("HISTORY ERROR:", err);
-    res.status(500).json([]);
-  }
-});
-
-/* =========================
-   START
-========================= */
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
