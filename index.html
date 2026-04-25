@@ -9,6 +9,10 @@
 
 <h2>IMEI TEST</h2>
 
+<p style="color:green; font-size:18px;">
+  Price: $1.99
+</p>
+
 <input id="imei" placeholder="enter imei"
 style="padding:10px; width:250px; font-size:16px;" />
 
@@ -30,7 +34,7 @@ Check
   "></div>
 </div>
 
-<!-- RESULT CARD -->
+<!-- RESULT -->
 <div id="resultCard" style="
   display:none;
   margin-top:20px;
@@ -43,7 +47,6 @@ Check
   font-size:18px;
 "></div>
 
-<!-- HISTORY -->
 <h3 style="margin-top:40px;">History</h3>
 
 <button onclick="loadHistory()"
@@ -73,7 +76,7 @@ th, td {
 </style>
 
 <script>
-const API_URL = "https://imei-info.onrender.com"; // твой сервер
+const API_URL = "https://imei-info.onrender.com";
 
 async function check() {
   const imei = document.getElementById("imei").value;
@@ -84,13 +87,9 @@ async function check() {
   spinner.style.display = "block";
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     const res = await fetch(API_URL + "/check", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId: imei })
     });
 
@@ -99,19 +98,24 @@ async function check() {
     spinner.style.display = "none";
     resultEl.style.display = "block";
 
-    let statusText = "";
+    let statusText = "⏳ Pending";
+    let color = "orange";
 
-    if (data.status === "pending") statusText = "⏳ Pending";
-    else if (data.status === "clean") statusText = "✅ Clean";
-    else if (data.status === "blocked") statusText = "❌ Blocked";
-    else statusText = data.status;
+    if (data.status === "clean") {
+      statusText = "✅ Clean";
+      color = "green";
+    } 
+    else if (data.status === "blocked") {
+      statusText = "❌ Blocked";
+      color = "red";
+    }
 
-    resultEl.innerText = "IMEI result → " + statusText;
+    resultEl.innerHTML = `
+      IMEI result → <b>${statusText}</b><br>
+      Price: <b>$${data.price || "1.99"}</b>
+    `;
 
-    if (data.status === "pending") resultEl.style.color = "orange";
-    else if (data.status === "clean") resultEl.style.color = "green";
-    else if (data.status === "blocked") resultEl.style.color = "red";
-    else resultEl.style.color = "black";
+    resultEl.style.color = color;
 
     loadHistory();
 
@@ -137,12 +141,12 @@ async function loadHistory() {
     </tr>
   `;
 
-  data.slice().reverse().forEach(item => {
+  data.reverse().forEach(item => {
     table.innerHTML += `
       <tr>
         <td>${item.deviceId}</td>
         <td>${item.status}</td>
-        <td>${item.time}</td>
+        <td>${new Date(item.time).toLocaleString()}</td>
       </tr>
     `;
   });
