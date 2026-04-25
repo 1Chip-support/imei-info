@@ -7,6 +7,44 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
+  STRIPE WEBHOOK (MUST BE FIRST)
+========================= */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const deviceId = session.metadata?.deviceId;
+
+      if (deviceId) {
+        await Check.updateOne(
+          { deviceId },
+          {
+            $set: {
+              deviceId,
+              paid: true,
+              status: "paid",
+              price: 1.99,
+              time: new Date()
+            }
+          },
+          { upsert: true }
+        );
+
+        console.log("PAYMENT SAVED:", deviceId);
+      }
+    }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err.message);
+    res.status(400).send("Webhook error");
+  }
+});
+
+/* =========================
 MIDDLEWARE
 ========================= */
 app.use(cors());
@@ -53,8 +91,7 @@ app.post("/admin/login", (req, res) => {
   if (user === ADMIN_USER && pass === ADMIN_PASS) {
     res.cookie("admin", "yes", {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false
+      sameSite: "lax"
     });
 
     return res.redirect("/admin");
@@ -67,44 +104,6 @@ app.post("/admin/login", (req, res) => {
 app.get("/admin/logout", (req, res) => {
   res.clearCookie("admin");
   res.redirect("/admin");
-});
-
-/* =========================
-STRIPE WEBHOOK (FIXED SAFE)
-========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const event = JSON.parse(req.body.toString());
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const deviceId = session.metadata?.deviceId;
-
-      if (!deviceId) return res.json({ ok: true });
-
-      await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            paid: true,
-            status: "paid",
-            price: 1.99,
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
-
-      console.log("PAYMENT SAVED:", deviceId);
-    }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.log("WEBHOOK ERROR:", err.message);
-    res.status(400).send("Webhook error");
-  }
 });
 
 /* =========================
@@ -121,6 +120,10 @@ app.post("/create-payment", async (req, res) => {
   try {
     const { deviceId } = req.body;
 
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId missing" });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -132,7 +135,7 @@ app.post("/create-payment", async (req, res) => {
         },
         quantity: 1
       }],
-      metadata: { deviceId: deviceId || "unknown" },
+      metadata: { deviceId },
       success_url: "https://chipper-cobbler-62c70c.netlify.app",
       cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
     });
