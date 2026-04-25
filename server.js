@@ -15,37 +15,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 /* =========================
-ADMIN AUTH (COOKIE)
-========================= */
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "Albatros1985";
-
-/* LOGIN */
-app.post("/admin/login", (req, res) => {
-  const { user, pass } = req.body;
-
-  if (user === ADMIN_USER && pass === ADMIN_PASS) {
-    res.cookie("admin", "yes", { httpOnly: true });
-    return res.redirect("/admin");
-  }
-
-  res.send("❌ Wrong login");
-});
-
-/* LOGOUT */
-app.get("/admin/logout", (req, res) => {
-  res.clearCookie("admin");
-  res.redirect("/admin");
-});
-
-/* =========================
 MONGODB
 ========================= */
 const mongoURL = process.env.MONGO_URL;
 
-mongoose.connect(mongoURL)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log("MongoDB error:", err));
+if (!mongoURL) {
+  console.log("❌ MONGO_URL missing");
+} else {
+  mongoose.connect(mongoURL)
+    .then(() => console.log("MongoDB connected"))
+    .catch(err => console.log("MongoDB error:", err));
+}
 
 /* =========================
 MODEL
@@ -61,7 +41,36 @@ const CheckSchema = new mongoose.Schema({
 const Check = mongoose.model("Check", CheckSchema);
 
 /* =========================
-STRIPE WEBHOOK
+ADMIN AUTH
+========================= */
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "Albatros1985";
+
+/* LOGIN */
+app.post("/admin/login", (req, res) => {
+  const { user, pass } = req.body;
+
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    res.cookie("admin", "yes", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false
+    });
+
+    return res.redirect("/admin");
+  }
+
+  res.send("❌ Wrong login");
+});
+
+/* LOGOUT */
+app.get("/admin/logout", (req, res) => {
+  res.clearCookie("admin");
+  res.redirect("/admin");
+});
+
+/* =========================
+STRIPE WEBHOOK (FIXED SAFE)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
@@ -71,29 +80,29 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
       const session = event.data.object;
       const deviceId = session.metadata?.deviceId;
 
-      if (deviceId) {
-        await Check.updateOne(
-          { deviceId },
-          {
-            $set: {
-              deviceId,
-              paid: true,
-              status: "paid",
-              price: 1.99,
-              time: new Date()
-            }
-          },
-          { upsert: true }
-        );
+      if (!deviceId) return res.json({ ok: true });
 
-        console.log("PAYMENT SAVED:", deviceId);
-      }
+      await Check.updateOne(
+        { deviceId },
+        {
+          $set: {
+            deviceId,
+            paid: true,
+            status: "paid",
+            price: 1.99,
+            time: new Date()
+          }
+        },
+        { upsert: true }
+      );
+
+      console.log("PAYMENT SAVED:", deviceId);
     }
 
     res.json({ received: true });
 
   } catch (err) {
-    console.log("WEBHOOK ERROR:", err);
+    console.log("WEBHOOK ERROR:", err.message);
     res.status(400).send("Webhook error");
   }
 });
@@ -123,7 +132,7 @@ app.post("/create-payment", async (req, res) => {
         },
         quantity: 1
       }],
-      metadata: { deviceId },
+      metadata: { deviceId: deviceId || "unknown" },
       success_url: "https://chipper-cobbler-62c70c.netlify.app",
       cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
     });
@@ -159,18 +168,6 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
-DELETE (ADMIN)
-========================= */
-app.get("/admin/delete/:id", async (req, res) => {
-  if (req.cookies.admin !== "yes") {
-    return res.send("❌ Not allowed");
-  }
-
-  await Check.findByIdAndDelete(req.params.id);
-  res.redirect("/admin");
-});
-
-/* =========================
 ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
@@ -180,13 +177,12 @@ app.get("/admin", async (req, res) => {
       <h2>Admin Login</h2>
       <form method="post" action="/admin/login">
         <input name="user" placeholder="user" />
-        <input name="pass" placeholder="pass" type="password" />
-        <button type="submit">Login</button>
+        <input name="pass" type="password" placeholder="pass" />
+        <button>Login</button>
       </form>
     `);
   }
 
-  // ✅ ТОЛЬКО ОПЛАЧЕННЫЕ
   const data = await Check.find({ paid: true }).sort({ _id: -1 });
 
   res.send(`
@@ -196,13 +192,14 @@ app.get("/admin", async (req, res) => {
 
       <a href="/admin/logout" style="color:red;">Logout</a>
 
+      ${data.length === 0 ? "<p>No orders yet</p>" : ""}
+
       ${data.map(i => `
         <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
           <b>IMEI:</b> ${i.deviceId}<br/>
           <b>Status:</b> ${i.status}<br/>
           <b>Paid:</b> ${i.paid}<br/>
-          <b>Time:</b> ${i.time}<br/>
-          <a href="/admin/delete/${i._id}" style="color:red;">🗑 Delete</a>
+          <b>Time:</b> ${i.time}
         </div>
       `).join("")}
 
