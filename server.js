@@ -12,21 +12,22 @@ app.use(express.json());
 ========================= */
 const mongoURL = process.env.MONGO_URL;
 
-if (mongoURL) {
+if (!mongoURL) {
+  console.log("❌ MONGO_URL missing");
+} else {
   mongoose.connect(mongoURL)
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.log("MongoDB error:", err));
-} else {
-  console.log("❌ MONGO_URL missing");
 }
 
 /* =========================
-   MODEL (ЗАЯВКИ)
+   MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
   deviceId: String,
   status: { type: String, default: "pending" },
   answer: { type: String, default: "" },
+  price: { type: Number, default: 1.99 },   // 💰 ДОБАВИЛ ЦЕНУ
   time: { type: Date, default: Date.now }
 });
 
@@ -40,7 +41,7 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   СОЗДАТЬ ЗАЯВКУ
+   CREATE REQUEST
 ========================= */
 app.post("/request", async (req, res) => {
   try {
@@ -50,21 +51,25 @@ app.post("/request", async (req, res) => {
       return res.json({ status: "error" });
     }
 
-    const request = await Check.create({ deviceId });
+    const request = await Check.create({
+      deviceId,
+      status: "pending"
+    });
 
     res.json({
       status: "created",
-      id: request._id
+      id: request._id,
+      price: 1.99   // 💰 ВОЗВРАЩАЕМ ЦЕНУ НА FRONTEND
     });
 
   } catch (err) {
-    console.log(err);
+    console.log("REQUEST ERROR:", err);
     res.status(500).json({ status: "server_error" });
   }
 });
 
 /* =========================
-   ПОЛУЧИТЬ ВСЕ ЗАЯВКИ (АДМИН)
+   ADMIN: GET REQUESTS
 ========================= */
 app.get("/requests", async (req, res) => {
   try {
@@ -76,7 +81,7 @@ app.get("/requests", async (req, res) => {
 });
 
 /* =========================
-   ОТВЕТИТЬ НА ЗАЯВКУ (АДМИН)
+   ADMIN: ANSWER
 ========================= */
 app.post("/answer", async (req, res) => {
   try {
@@ -90,6 +95,7 @@ app.post("/answer", async (req, res) => {
     res.json({ ok: true });
 
   } catch (err) {
+    console.log("ANSWER ERROR:", err);
     res.status(500).json({ ok: false });
   }
 });
