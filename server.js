@@ -11,12 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* Stripe webhook MUST be raw */
+/* =========================
+   STRIPE WEBHOOK
+========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
-
-    console.log("WEBHOOK:", event.type);
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
@@ -113,7 +113,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-   CHECK (SECURE)
+   CHECK IMEI
 ========================= */
 app.post("/check", async (req, res) => {
   try {
@@ -161,6 +161,48 @@ app.post("/answer", async (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false });
   }
+});
+
+/* =========================
+   ADMIN PANEL
+========================= */
+const ADMIN_KEY = "Albatros1985";
+
+app.get("/admin", async (req, res) => {
+  if (req.query.key !== ADMIN_KEY) {
+    return res.send("❌ Not allowed");
+  }
+
+  const data = await Check.find().sort({ _id: -1 });
+
+  res.send(`
+    <html>
+    <head>
+      <title>Admin Panel</title>
+      <style>
+        body { font-family: Arial; background:#111; color:#fff; padding:20px; }
+        .box { background:#222; padding:10px; margin:10px 0; border-radius:8px; }
+        .paid { color:lime; }
+        .unpaid { color:red; }
+      </style>
+    </head>
+    <body>
+      <h1>📊 IMEI ADMIN PANEL</h1>
+
+      ${data.map(i => `
+        <div class="box">
+          <b>IMEI:</b> ${i.deviceId} <br/>
+          <b>Status:</b> ${i.status} <br/>
+          <b class="${i.paid ? 'paid' : 'unpaid'}">
+            Paid: ${i.paid}
+          </b><br/>
+          <b>Time:</b> ${i.time}
+        </div>
+      `).join("")}
+
+    </body>
+    </html>
+  `);
 });
 
 /* =========================
