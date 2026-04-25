@@ -6,13 +6,46 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
 const app = express();
 
 /* =========================
-   MIDDLEWARE
+ MIDDLEWARE
 ========================= */
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // ✅ ВАЖНО (фикс формы)
 
 /* =========================
-   STRIPE WEBHOOK
+ SIMPLE ADMIN AUTH
+========================= */
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "Albatros1985";
+let adminLogged = false;
+
+/* =========================
+ LOGIN
+========================= */
+app.post("/admin/login", (req, res) => {
+  const user = req.body.user;
+  const pass = req.body.pass;
+
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    adminLogged = true;
+
+    // 👉 редирект в админку
+    return res.redirect("/admin");
+  }
+
+  res.send("❌ Wrong login");
+});
+
+/* =========================
+ LOGOUT
+========================= */
+app.get("/admin/logout", (req, res) => {
+  adminLogged = false;
+  res.redirect("/admin");
+});
+
+/* =========================
+ STRIPE WEBHOOK
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
@@ -50,7 +83,7 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
 });
 
 /* =========================
-   MONGODB
+ MONGODB
 ========================= */
 const mongoURL = process.env.MONGO_URL;
 
@@ -59,7 +92,7 @@ mongoose.connect(mongoURL)
   .catch(err => console.log("MongoDB error:", err));
 
 /* =========================
-   MODEL
+ MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
   deviceId: String,
@@ -72,14 +105,14 @@ const CheckSchema = new mongoose.Schema({
 const Check = mongoose.model("Check", CheckSchema);
 
 /* =========================
-   ROOT
+ ROOT
 ========================= */
 app.get("/", (req, res) => {
   res.send("API is working 🚀");
 });
 
 /* =========================
-   CREATE PAYMENT
+ CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
   try {
@@ -88,7 +121,6 @@ app.post("/create-payment", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
-
       line_items: [{
         price_data: {
           currency: "usd",
@@ -97,9 +129,7 @@ app.post("/create-payment", async (req, res) => {
         },
         quantity: 1
       }],
-
       metadata: { deviceId },
-
       success_url: "https://chipper-cobbler-62c70c.netlify.app",
       cancel_url: "https://chipper-cobbler-62c70c.netlify.app"
     });
@@ -107,13 +137,12 @@ app.post("/create-payment", async (req, res) => {
     res.json({ url: session.url });
 
   } catch (err) {
-    console.log(err);
     res.status(500).json({ error: err.message });
   }
 });
 
 /* =========================
-   CHECK IMEI
+ CHECK IMEI
 ========================= */
 app.post("/check", async (req, res) => {
   try {
@@ -125,19 +154,18 @@ app.post("/check", async (req, res) => {
       return res.status(403).json({ status: "payment_required" });
     }
 
-    return res.json({
+    res.json({
       deviceId,
       status: payment.status
     });
 
   } catch (err) {
-    console.log(err);
     res.status(500).json({ status: "server_error" });
   }
 });
 
 /* =========================
-   HISTORY
+ HISTORY
 ========================= */
 app.get("/history", async (req, res) => {
   const data = await Check.find().sort({ _id: -1 });
@@ -145,57 +173,34 @@ app.get("/history", async (req, res) => {
 });
 
 /* =========================
-   ANSWER
+ ADMIN PANEL
 ========================= */
-app.post("/answer", async (req, res) => {
-  try {
-    const { id, answer } = req.body;
-
-    await Check.findByIdAndUpdate(id, {
-      answer,
-      status: "done"
-    });
-
-    res.json({ ok: true });
-
-  } catch (err) {
-    res.status(500).json({ ok: false });
-  }
-});
-
-/* =========================
-   ADMIN PANEL
-========================= */
-const ADMIN_KEY = "Albatros1985";
-
 app.get("/admin", async (req, res) => {
-  if (req.query.key !== ADMIN_KEY) {
-    return res.send("❌ Not allowed");
+  if (!adminLogged) {
+    return res.send(`
+      <h2>Admin Login</h2>
+      <form method="post" action="/admin/login">
+        <input name="user" placeholder="user" />
+        <input name="pass" placeholder="pass" type="password" />
+        <button type="submit">Login</button>
+      </form>
+    `);
   }
 
   const data = await Check.find().sort({ _id: -1 });
 
   res.send(`
     <html>
-    <head>
-      <title>Admin Panel</title>
-      <style>
-        body { font-family: Arial; background:#111; color:#fff; padding:20px; }
-        .box { background:#222; padding:10px; margin:10px 0; border-radius:8px; }
-        .paid { color:lime; }
-        .unpaid { color:red; }
-      </style>
-    </head>
-    <body>
-      <h1>📊 IMEI ADMIN PANEL</h1>
+    <body style="background:#111;color:#fff;font-family:Arial;padding:20px;">
+      <h1>📊 ADMIN PANEL</h1>
+
+      <a href="/admin/logout" style="color:red;">Logout</a>
 
       ${data.map(i => `
-        <div class="box">
-          <b>IMEI:</b> ${i.deviceId} <br/>
-          <b>Status:</b> ${i.status} <br/>
-          <b class="${i.paid ? 'paid' : 'unpaid'}">
-            Paid: ${i.paid}
-          </b><br/>
+        <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
+          <b>IMEI:</b> ${i.deviceId}<br/>
+          <b>Status:</b> ${i.status}<br/>
+          <b>Paid:</b> ${i.paid}<br/>
           <b>Time:</b> ${i.time}
         </div>
       `).join("")}
@@ -206,7 +211,7 @@ app.get("/admin", async (req, res) => {
 });
 
 /* =========================
-   START
+ START
 ========================= */
 const PORT = process.env.PORT || 3000;
 
