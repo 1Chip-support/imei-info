@@ -16,15 +16,14 @@
 <input id="imei" placeholder="enter imei"
 style="padding:10px; width:250px; font-size:16px;" />
 
-<!-- CHECK BUTTON -->
 <button onclick="check()"
 style="padding:10px 20px; font-size:16px; margin-left:10px;">
 Check
 </button>
 
-<!-- PAY BUTTON -->
-<button onclick="pay()"
-style="padding:10px 20px; font-size:16px; margin-left:10px; background:green; color:white;">
+<!-- PAY BUTTON (СНАЧАЛА СКРЫТ) -->
+<button id="payBtn" onclick="pay()"
+style="display:none; padding:10px 20px; font-size:16px; margin-left:10px; background:green; color:white;">
 Pay $1.99
 </button>
 
@@ -54,52 +53,51 @@ Pay $1.99
   font-size:18px;
 "></div>
 
-<h3 style="margin-top:40px;">History</h3>
-
-<button onclick="loadHistory()"
-style="padding:8px 15px; margin-bottom:10px;">
-Refresh
-</button>
-
-<table id="table" style="
-  margin:0 auto;
-  border-collapse: collapse;
-  width:80%;
-"></table>
-
-<style>
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-table, th, td {
-  border: 1px solid #ddd;
-}
-
-th, td {
-  padding: 8px;
-}
-</style>
-
 <script>
 const API_URL = "https://imei-info.onrender.com";
 
+let currentIMEI = "";
+
 /* =========================
-   PAYMENT (NEW)
+CHECK → создаём заявку
 ========================= */
-async function pay() {
+async function check() {
   const imei = document.getElementById("imei").value;
 
-  if (!imei) {
-    alert("Enter IMEI first");
-    return;
-  }
+  if (!imei) return alert("Enter IMEI");
+
+  currentIMEI = imei;
+
+  document.getElementById("spinner").style.display = "block";
+
+  const res = await fetch(API_URL + "/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId: imei })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("spinner").style.display = "none";
+
+  // 👉 ПОКАЗАТЬ PAY КНОПКУ
+  document.getElementById("payBtn").style.display = "inline-block";
+
+  document.getElementById("resultCard").style.display = "block";
+  document.getElementById("resultCard").innerHTML =
+    "📌 Request created. Now pay to continue.";
+}
+
+/* =========================
+PAY
+========================= */
+async function pay() {
+  if (!currentIMEI) return alert("Check IMEI first");
 
   const res = await fetch(API_URL + "/create-payment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ deviceId: imei })
+    body: JSON.stringify({ deviceId: currentIMEI })
   });
 
   const data = await res.json();
@@ -109,86 +107,6 @@ async function pay() {
   } else {
     alert("Payment error");
   }
-}
-
-/* =========================
-   CHECK
-========================= */
-async function check() {
-  const imei = document.getElementById("imei").value;
-  const resultEl = document.getElementById("resultCard");
-  const spinner = document.getElementById("spinner");
-
-  resultEl.style.display = "none";
-  spinner.style.display = "block";
-
-  try {
-    const res = await fetch(API_URL + "/check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId: imei })
-    });
-
-    const data = await res.json();
-
-    spinner.style.display = "none";
-    resultEl.style.display = "block";
-
-    let statusText = "⏳ Pending";
-    let color = "orange";
-
-    if (data.status === "clean") {
-      statusText = "✅ Clean";
-      color = "green";
-    } 
-    else if (data.status === "blocked") {
-      statusText = "❌ Blocked";
-      color = "red";
-    }
-
-    resultEl.innerHTML = `
-      IMEI result → <b>${statusText}</b><br>
-      Price: <b>$1.99</b>
-    `;
-
-    resultEl.style.color = color;
-
-    loadHistory();
-
-  } catch (err) {
-    spinner.style.display = "none";
-    resultEl.style.display = "block";
-    resultEl.innerText = "Server error";
-    resultEl.style.color = "red";
-  }
-}
-
-/* =========================
-   HISTORY
-========================= */
-async function loadHistory() {
-  const table = document.getElementById("table");
-
-  const res = await fetch(API_URL + "/history");
-  const data = await res.json();
-
-  table.innerHTML = `
-    <tr>
-      <th>IMEI</th>
-      <th>Status</th>
-      <th>Time</th>
-    </tr>
-  `;
-
-  data.reverse().forEach(item => {
-    table.innerHTML += `
-      <tr>
-        <td>${item.deviceId}</td>
-        <td>${item.status}</td>
-        <td>${new Date(item.time).toLocaleString()}</td>
-      </tr>
-    `;
-  });
 }
 </script>
 
