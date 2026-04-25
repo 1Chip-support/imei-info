@@ -21,12 +21,13 @@ if (mongoURL) {
 }
 
 /* =========================
-   MODEL
+   MODEL (ЗАЯВКИ)
 ========================= */
 const CheckSchema = new mongoose.Schema({
   deviceId: String,
-  status: String,
-  time: String
+  status: { type: String, default: "pending" },
+  answer: { type: String, default: "" },
+  time: { type: Date, default: Date.now }
 });
 
 const Check = mongoose.model("Check", CheckSchema);
@@ -39,9 +40,9 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   CHECK IMEI
+   СОЗДАТЬ ЗАЯВКУ
 ========================= */
-app.post("/check", async (req, res) => {
+app.post("/request", async (req, res) => {
   try {
     const { deviceId } = req.body;
 
@@ -49,44 +50,47 @@ app.post("/check", async (req, res) => {
       return res.json({ status: "error" });
     }
 
-    let status = "pending";
+    const request = await Check.create({ deviceId });
 
-    const last = deviceId.slice(-1);
-
-    if (last === "0") status = "blocked";
-    else if (last === "5") status = "clean";
-
-    const result = {
-      deviceId,
-      status,
-      time: new Date().toISOString()
-    };
-
-    if (mongoURL) {
-      await Check.create(result);
-    }
-
-    res.json(result);
+    res.json({
+      status: "created",
+      id: request._id
+    });
 
   } catch (err) {
-    console.log("CHECK ERROR:", err);
+    console.log(err);
     res.status(500).json({ status: "server_error" });
   }
 });
 
 /* =========================
-   HISTORY
+   ПОЛУЧИТЬ ВСЕ ЗАЯВКИ (АДМИН)
 ========================= */
-app.get("/history", async (req, res) => {
+app.get("/requests", async (req, res) => {
   try {
-    if (!mongoURL) return res.json([]);
-
     const data = await Check.find().sort({ _id: -1 });
     res.json(data);
+  } catch (err) {
+    res.status(500).json([]);
+  }
+});
+
+/* =========================
+   ОТВЕТИТЬ НА ЗАЯВКУ (АДМИН)
+========================= */
+app.post("/answer", async (req, res) => {
+  try {
+    const { id, answer } = req.body;
+
+    await Check.findByIdAndUpdate(id, {
+      status: "done",
+      answer
+    });
+
+    res.json({ ok: true });
 
   } catch (err) {
-    console.log("HISTORY ERROR:", err);
-    res.status(500).json([]);
+    res.status(500).json({ ok: false });
   }
 });
 
