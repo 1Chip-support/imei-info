@@ -9,59 +9,66 @@
 body{
   margin:0;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-  background:#f5f5f7;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  overflow:hidden; /* ❗ фикс без скролла */
+  background:#f2f2f7;
 }
 
-/* 📱 iPhone frame feel */
-.card{
-  width:360px;              /* фикс как iPhone */
-  max-width:90%;
-  background:white;
-  padding:22px;
-  border-radius:22px;
-  box-shadow:0 20px 50px rgba(0,0,0,0.12);
-  text-align:center;
+/* 📱 TOP SAFE SPACE (like iOS Settings) */
+.safe-area{
+  padding:40px 18px;   /* 👈 большие боковые поля */
+  max-width:420px;
+  margin:0 auto;       /* центр только как iOS */
 }
 
-/* title */
+/* TITLE */
 h2{
-  margin:0;
-  font-size:20px;
+  font-size:22px;
   font-weight:600;
-  color:#111;
+  margin:10px 0 5px;
 }
 
-/* small ios subtitle */
+/* SUBTEXT */
 .small{
-  margin-top:6px;
-  font-size:12px;
+  font-size:13px;
   color:#8e8e93;
+  margin-bottom:20px;
 }
 
-/* inputs ios style */
+/* 🧩 SETTINGS STYLE GROUP */
+.group{
+  background:white;
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid #e5e5ea;
+}
+
+/* INPUTS LIKE iOS CELLS */
 input{
   width:100%;
-  padding:12px;
-  margin:8px 0;
-  border-radius:14px;
-  border:1px solid #e5e5ea;
+  padding:14px;
+
+  border:none;
   outline:none;
+
   font-size:15px;
-  background:#f9f9fb;
+  background:white;
 }
 
-/* buttons ios */
+/* разделение строк как iOS */
+.divider{
+  height:1px;
+  background:#e5e5ea;
+  margin:0;
+}
+
+/* BUTTON */
 button{
   width:100%;
-  padding:12px;
-  margin-top:10px;
+  margin-top:14px;
+  padding:14px;
+
   border:none;
   border-radius:14px;
+
   font-size:15px;
   cursor:pointer;
 }
@@ -76,32 +83,28 @@ button{
   color:white;
   display:none;
 }
-
-/* ❗ пустые поля слева/справа (illusion iPhone spacing) */
-.wrapper{
-  width:100%;
-  display:flex;
-  justify-content:center;
-}
 </style>
 </head>
 
 <body>
 
-<div class="wrapper">
-
-<div class="card">
+<div class="safe-area">
 
   <h2>iPhone IMEI Check</h2>
   <div class="small">Only for Apple devices</div>
 
-  <input id="imei" placeholder="IMEI">
-  <input id="email" placeholder="Email">
+  <!-- SETTINGS STYLE BLOCK -->
+  <div class="group">
+
+    <input id="imei" placeholder="IMEI">
+    <div class="divider"></div>
+
+    <input id="email" placeholder="Email">
+
+  </div>
 
   <button class="check" onclick="check()">Check</button>
   <button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
-
-</div>
 
 </div>
 
