@@ -2,40 +2,38 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>IMEI TEST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMEI CHECK</title>
 </head>
 
-<body style="font-family: Arial; text-align: center; margin-top: 100px;">
+<body style="font-family: Arial; text-align: center; margin-top: 80px; padding:10px; background:#f2f2f2;">
 
-<h2>IMEI TEST</h2>
+<h2>IMEI CHECK</h2>
 
 <p style="color:green; font-size:18px;">
   Price: $1.99
 </p>
 
 <input id="imei" placeholder="enter imei"
-style="padding:10px; width:250px; font-size:16px;" />
+style="padding:10px; width:90%; max-width:250px; font-size:16px; border-radius:6px; border:1px solid #ccc;" />
 
 <br><br>
 
-<!-- EMAIL FIELD -->
 <input id="email" placeholder="enter email"
-style="padding:10px; width:250px; font-size:16px;" />
+style="padding:10px; width:90%; max-width:250px; font-size:16px; border-radius:6px; border:1px solid #ccc;" />
 
 <br><br>
 
 <button onclick="check()"
-style="padding:10px 20px; font-size:16px; margin-left:10px;">
+style="padding:10px 20px; font-size:16px; border-radius:6px; border:none; background:#333; color:white;">
 Check
 </button>
 
-<!-- PAY BUTTON -->
 <button id="payBtn" onclick="pay()"
-style="display:none; padding:10px 20px; font-size:16px; margin-left:10px; background:green; color:white;">
+style="display:none; padding:10px 20px; font-size:16px; margin-top:10px; background:green; color:white; border:none; border-radius:6px;">
 Pay $1.99
 </button>
 
-<!-- SPINNER -->
 <div id="spinner" style="display:none; margin-top:15px;">
   <div style="
     width:30px;
@@ -48,17 +46,18 @@ Pay $1.99
   "></div>
 </div>
 
-<!-- RESULT -->
 <div id="resultCard" style="
   display:none;
   margin-top:20px;
   padding:15px;
   border-radius:10px;
-  width:320px;
+  width:90%;
+  max-width:320px;
   margin-left:auto;
   margin-right:auto;
-  background:#f5f5f5;
+  background:white;
   font-size:18px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.1);
 "></div>
 
 <script>
@@ -67,12 +66,10 @@ const API_URL = "https://imei-info.onrender.com";
 let currentIMEI = "";
 let currentEmail = "";
 
-/* =========================
-CHECK
-========================= */
+/* CHECK */
 async function check() {
-  const imei = document.getElementById("imei").value;
-  const email = document.getElementById("email").value;
+  const imei = document.getElementById("imei").value.trim();
+  const email = document.getElementById("email").value.trim();
 
   if (!imei) return alert("Enter IMEI");
   if (!email) return alert("Enter email");
@@ -82,19 +79,16 @@ async function check() {
 
   document.getElementById("spinner").style.display = "block";
 
-  const res = await fetch(API_URL + "/check", {
+  await fetch(API_URL + "/check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       deviceId: imei,
       email: email
     })
   });
 
-  const data = await res.json();
-
   document.getElementById("spinner").style.display = "none";
-
   document.getElementById("payBtn").style.display = "inline-block";
 
   document.getElementById("resultCard").style.display = "block";
@@ -102,16 +96,14 @@ async function check() {
     "📌 Request created. Now pay to continue.";
 }
 
-/* =========================
-PAY
-========================= */
+/* PAY */
 async function pay() {
-  if (!currentIMEI) return alert("Check IMEI first");
+  if (!currentIMEI || !currentEmail) return alert("Fill data first");
 
   const res = await fetch(API_URL + "/create-payment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       deviceId: currentIMEI,
       email: currentEmail
     })
