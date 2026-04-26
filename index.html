@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone IMEI Check</title>
 
 <style>
@@ -12,65 +12,65 @@ body{
   background:#f2f2f7;
 }
 
-/* 📱 TOP SAFE SPACE (like iOS Settings) */
 .safe-area{
-  padding:40px 18px;   /* 👈 большие боковые поля */
+  padding:40px 18px;
   max-width:420px;
-  margin:0 auto;       /* центр только как iOS */
+  margin:0 auto;
 }
 
-/* TITLE */
 h2{
   font-size:22px;
   font-weight:600;
-  margin:10px 0 5px;
 }
 
-/* SUBTEXT */
 .small{
   font-size:13px;
   color:#8e8e93;
   margin-bottom:20px;
 }
 
-/* 🧩 SETTINGS STYLE GROUP */
+/* GROUP */
 .group{
   background:white;
   border-radius:14px;
   overflow:hidden;
   border:1px solid #e5e5ea;
+  margin-bottom:12px;
 }
 
-/* INPUTS LIKE iOS CELLS */
+/* INPUT */
 input{
   width:100%;
   padding:14px;
-
   border:none;
   outline:none;
-
   font-size:15px;
-  background:white;
 }
 
-/* разделение строк как iOS */
+/* ITEM */
+.item{
+  padding:14px;
+  font-size:15px;
+  cursor:pointer;
+}
+
+.item:active{
+  background:#f2f2f7;
+}
+
 .divider{
   height:1px;
   background:#e5e5ea;
-  margin:0;
 }
 
 /* BUTTON */
 button{
   width:100%;
-  margin-top:14px;
   padding:14px;
-
   border:none;
   border-radius:14px;
-
+  margin-top:10px;
   font-size:15px;
-  cursor:pointer;
 }
 
 .check{
@@ -83,6 +83,10 @@ button{
   color:white;
   display:none;
 }
+
+.selected{
+  background:#e8f0ff;
+}
 </style>
 </head>
 
@@ -90,40 +94,95 @@ button{
 
 <div class="safe-area">
 
-  <h2>iPhone IMEI Check</h2>
-  <div class="small">Only for Apple devices</div>
+<h2>iPhone IMEI Check</h2>
+<div class="small">Only for Apple devices</div>
 
-  <!-- SETTINGS STYLE BLOCK -->
-  <div class="group">
+<!-- IMEI -->
+<div class="group">
+  <input id="imei" placeholder="IMEI">
+</div>
 
-    <input id="imei" placeholder="IMEI">
-    <div class="divider"></div>
+<!-- TYPE SELECT -->
+<div class="group">
 
-    <input id="email" placeholder="Email">
-
+  <div class="item" onclick="selectType(this,'carrier')">
+    Carrier status
   </div>
 
-  <button class="check" onclick="check()">Check</button>
-  <button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
+  <div class="divider"></div>
+
+  <div class="item" onclick="selectType(this,'findmy')">
+    Find My iPhone
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="item" onclick="selectType(this,'blacklist')">
+    Blacklist check
+  </div>
+
+</div>
+
+<!-- EMAIL -->
+<div class="group">
+  <input id="email" placeholder="Email">
+</div>
+
+<button class="check" onclick="check()">Check</button>
+<button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
 
 </div>
 
 <script>
-function check(){
-  const imei = document.getElementById("imei").value;
-  const email = document.getElementById("email").value;
 
-  if(!imei || !email){
-    alert("Fill all fields");
+const API_URL = "https://imei-info.onrender.com";
+
+let imei = "";
+let email = "";
+let type = "";
+
+function selectType(el, t){
+  type = t;
+
+  document.querySelectorAll(".item").forEach(i=>{
+    i.classList.remove("selected");
+  });
+
+  el.classList.add("selected");
+}
+
+function check(){
+  imei = document.getElementById("imei").value.trim();
+  email = document.getElementById("email").value.trim();
+
+  if(!imei  !email  !type){
+    alert("Fill all fields + select type");
     return;
   }
 
-  document.getElementById("payBtn").style.display="block";
+  document.getElementById("payBtn").style.display = "block";
 }
 
-function pay(){
-  alert("Connect backend here");
+async function pay(){
+  const res = await fetch(API_URL + "/create-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      deviceId: imei,
+      email: email,
+      type: type
+    })
+  });
+
+  const data = await res.json();
+
+  if(data.url){
+    window.location.href = data.url;
+  } else {
+    alert("Payment error");
+  }
 }
+
 </script>
 
 </body>
