@@ -2,40 +2,41 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>iPhone IMEI Check</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>IMEI Check</title>
 
 <style>
 body{
   margin:0;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
   background:#f2f2f7;
+  overflow:hidden; /* 🔥 НЕ ДВИГАЕТСЯ ЭКРАН */
 }
 
-.safe-area{
-  padding:40px 18px;
-  max-width:420px;
-  margin:0 auto;
+/* FIXED SCREEN */
+.screen{
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
+/* CARD */
+.card{
+  width:90%;
+  max-width:380px;
+}
+
+/* HEADER */
 h2{
   font-size:22px;
-  font-weight:600;
+  margin-bottom:6px;
 }
 
-.small{
+.sub{
   font-size:13px;
   color:#8e8e93;
   margin-bottom:20px;
-}
-
-/* GROUP */
-.group{
-  background:white;
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid #e5e5ea;
-  margin-bottom:12px;
 }
 
 /* INPUT */
@@ -45,22 +46,16 @@ input{
   border:none;
   outline:none;
   font-size:15px;
+  background:white;
 }
 
-/* ITEM */
-.item{
-  padding:14px;
-  font-size:15px;
-  cursor:pointer;
-}
-
-.item:active{
-  background:#f2f2f7;
-}
-
-.divider{
-  height:1px;
-  background:#e5e5ea;
+/* GROUP */
+.group{
+  background:white;
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid #e5e5ea;
+  margin-bottom:10px;
 }
 
 /* BUTTON */
@@ -71,9 +66,10 @@ button{
   border-radius:14px;
   margin-top:10px;
   font-size:15px;
+  cursor:pointer;
 }
 
-.check{
+.main{
   background:#0071e3;
   color:white;
 }
@@ -84,52 +80,72 @@ button{
   display:none;
 }
 
-.selected{
-  background:#e8f0ff;
+/* OPTIONS MODAL */
+.modal{
+  position:fixed;
+  bottom:-100%;
+  left:0;
+  width:100%;
+  background:white;
+  border-top-left-radius:20px;
+  border-top-right-radius:20px;
+  transition:0.3s;
+  padding:20px;
+}
+
+.modal.show{
+  bottom:0;
+}
+
+.opt{
+  padding:14px;
+  border-bottom:1px solid #eee;
+  font-size:15px;
+}
+
+.opt:active{
+  background:#f2f2f7;
 }
 </style>
 </head>
 
 <body>
 
-<div class="safe-area">
+<div class="screen">
+
+<div class="card">
 
 <h2>iPhone IMEI Check</h2>
-<div class="small">Only for Apple devices</div>
+<div class="sub">Only for Apple devices</div>
 
 <!-- IMEI -->
 <div class="group">
-  <input id="imei" placeholder="IMEI">
+  <input id="imei" placeholder="Enter IMEI">
 </div>
 
-<!-- TYPE SELECT -->
-<div class="group">
-
-  <div class="item" onclick="selectType(this,'carrier')">
-    Carrier status
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="item" onclick="selectType(this,'findmy')">
-    Find My iPhone
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="item" onclick="selectType(this,'blacklist')">
-    Blacklist check
-  </div>
-
-</div>
+<!-- OPTIONS BUTTON -->
+<button class="main" onclick="openOptions()">
+  Options
+</button>
 
 <!-- EMAIL -->
 <div class="group">
   <input id="email" placeholder="Email">
 </div>
 
-<button class="check" onclick="check()">Check</button>
+<button class="main" onclick="check()">Check</button>
 <button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
+
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+
+  <div class="opt" onclick="selectType('carrier')">Carrier status</div>
+  <div class="opt" onclick="selectType('findmy')">Find My iPhone</div>
+  <div class="opt" onclick="selectType('blacklist')">Blacklist check</div>
 
 </div>
 
@@ -137,36 +153,38 @@ button{
 
 const API_URL = "https://imei-info.onrender.com";
 
-let imei = "";
-let email = "";
-let type = "";
+let imei="", email="", type="carrier";
 
-function selectType(el, t){
-  type = t;
-
-  document.querySelectorAll(".item").forEach(i=>{
-    i.classList.remove("selected");
-  });
-
-  el.classList.add("selected");
+/* OPEN OPTIONS */
+function openOptions(){
+  document.getElementById("modal").classList.add("show");
 }
 
+/* SELECT TYPE */
+function selectType(t){
+  type = t;
+  document.getElementById("modal").classList.remove("show");
+}
+
+/* CHECK */
 function check(){
   imei = document.getElementById("imei").value.trim();
   email = document.getElementById("email").value.trim();
 
-  if(!imei  !email  !type){
-    alert("Fill all fields + select type");
+  if(!imei || !email){
+    alert("Fill all fields");
     return;
   }
 
-  document.getElementById("payBtn").style.display = "block";
+  document.getElementById("payBtn").style.display="block";
 }
 
+/* PAY */
 async function pay(){
+
   const res = await fetch(API_URL + "/create-payment", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
     body: JSON.stringify({
       deviceId: imei,
       email: email,

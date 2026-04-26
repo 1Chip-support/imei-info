@@ -1,207 +1,184 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>IMEI Check</title>
+const mongoose = require("mongoose");
+const express = require("express");
+const cors = require("cors");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const cookieParser = require("cookie-parser");
 
-<style>
-body{
-  margin:0;
-  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-  background:#f2f2f7;
-  overflow:hidden; /* 🔥 НЕ ДВИГАЕТСЯ ЭКРАН */
-}
+const app = express();
 
-/* FIXED SCREEN */
-.screen{
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
+/* =========================
+MIDDLEWARE
+========================= */
+app.use(cors());
+app.use(cookieParser());
 
-/* CARD */
-.card{
-  width:90%;
-  max-width:380px;
-}
+/* =========================
+MONGODB
+========================= */
+mongoose.connect(process.env.MONGO_URL)
+ .then(() => console.log("MongoDB connected"))
+ .catch(err => console.log("MongoDB error:", err));
 
-/* HEADER */
-h2{
-  font-size:22px;
-  margin-bottom:6px;
-}
+/* =========================
+MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+ deviceId: { type: String, unique: true },
+ type: { type: String, default: "carrier" }, // 👈 ДОБАВИЛ TYPE
+ status: { type: String, default: "pending" },
+ price: { type: Number, default: 1.99 },
+ paid: { type: Boolean, default: false },
+ time: { type: Date, default: Date.now }
+});
 
-.sub{
-  font-size:13px;
-  color:#8e8e93;
-  margin-bottom:20px;
-}
+const Check = mongoose.model("Check", CheckSchema);
 
-/* INPUT */
-input{
-  width:100%;
-  padding:14px;
-  border:none;
-  outline:none;
-  font-size:15px;
-  background:white;
-}
+/* =========================
+WEBHOOK
+========================= */
+app.post("/stripe-webhook",
+express.raw({ type: "application/json" }),
+async (req, res) => {
+ try {
+   const event = JSON.parse(req.body.toString());
 
-/* GROUP */
-.group{
-  background:white;
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid #e5e5ea;
-  margin-bottom:10px;
-}
+   console.log("🔥 WEBHOOK:", event.type);
 
-/* BUTTON */
-button{
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:14px;
-  margin-top:10px;
-  font-size:15px;
-  cursor:pointer;
-}
+   if (event.type === "checkout.session.completed") {
+     const session = event.data.object;
 
-.main{
-  background:#0071e3;
-  color:white;
-}
+     const deviceId = session.metadata?.deviceId;
+     const type = session.metadata?.type; // 👈 TYPE
 
-.pay{
-  background:#34c759;
-  color:white;
-  display:none;
-}
+     if (!deviceId) return res.json({ ok: true });
 
-/* OPTIONS MODAL */
-.modal{
-  position:fixed;
-  bottom:-100%;
-  left:0;
-  width:100%;
-  background:white;
-  border-top-left-radius:20px;
-  border-top-right-radius:20px;
-  transition:0.3s;
-  padding:20px;
-}
+     await Check.updateOne(
+       { deviceId },
+       {
+         $set: {
+           deviceId,
+           type, // 👈 SAVE TYPE
+           paid: true,
+           status: "paid",
+           price: 1.99,
+           time: new Date()
+         }
+       },
+       { upsert: true }
+     );
 
-.modal.show{
-  bottom:0;
-}
+     console.log("💰 PAYMENT SAVED:", deviceId, type);
+   }
 
-.opt{
-  padding:14px;
-  border-bottom:1px solid #eee;
-  font-size:15px;
-}
+   res.json({ received: true });
 
-.opt:active{
-  background:#f2f2f7;
-}
-</style>
-</head>
+ } catch (err) {
+   console.log("WEBHOOK ERROR:", err.message);
+   res.status(400).send("Webhook error");
+ }
+});
 
-<body>
+/* =========================
+JSON PARSER
+========================= */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-<div class="screen">
+/* =========================
+CREATE PAYMENT
+========================= */
+app.post("/create-payment", async (req, res) => {
+ try {
+   const { deviceId, type } = req.body; // 👈 TYPE
 
-<div class="card">
+   if (!deviceId) {
+     return res.status(400).json({ error: "deviceId missing" });
+   }
 
-<h2>iPhone IMEI Check</h2>
-<div class="sub">Only for Apple devices</div>
+   const session = await stripe.checkout.sessions.create({
+     payment_method_types: ["card"],
+     mode: "payment",
+     line_items: [{
+       price_data: {
+         currency: "usd",
+         product_data: { name: "IMEI Check (" + (type || "carrier") + ")" },
+         unit_amount: 199
+       },
+       quantity: 1
+     }],
+     metadata: {
+       deviceId,
+       type // 👈 SEND TYPE TO STRIPE
+     },
+     success_url: "https://imei-info.pages.dev",
+     cancel_url: "https://imei-info.pages.dev"
+   });
 
-<!-- IMEI -->
-<div class="group">
-  <input id="imei" placeholder="Enter IMEI">
-</div>
+   res.json({ url: session.url });
 
-<!-- OPTIONS BUTTON -->
-<button class="main" onclick="openOptions()">
-  Options
-</button>
+ } catch (err) {
+   res.status(500).json({ error: err.message });
+ }
+});
 
-<!-- EMAIL -->
-<div class="group">
-  <input id="email" placeholder="Email">
-</div>
+/* =========================
+CHECK IMEI
+========================= */
+app.post("/check", async (req, res) => {
+ try {
+   const { deviceId } = req.body;
 
-<button class="main" onclick="check()">Check</button>
-<button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
+   const payment = await Check.findOne({ deviceId });
 
-</div>
+   if (!payment || !payment.paid) {
+     return res.status(403).json({ status: "payment_required" });
+   }
 
-</div>
+   res.json(payment);
 
-<!-- MODAL -->
-<div id="modal" class="modal">
+ } catch (err) {
+   res.status(500).json({ status: "server_error" });
+ }
+});
 
-  <div class="opt" onclick="selectType('carrier')">Carrier status</div>
-  <div class="opt" onclick="selectType('findmy')">Find My iPhone</div>
-  <div class="opt" onclick="selectType('blacklist')">Blacklist check</div>
+/* =========================
+ADMIN PANEL
+========================= */
+app.get("/admin", async (req, res) => {
+ const data = await Check.find().sort({ _id: -1 });
 
-</div>
+ res.send(`
+ <html>
+ <body style="font-family:Arial;background:#111;color:#fff;padding:20px;">
+ <h1>📊 ADMIN PANEL</h1>
+ <hr/>
 
-<script>
+ ${data.map(i => `
+   <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
+     <b>IMEI:</b> ${i.deviceId}<br/>
+     <b>Type:</b> ${i.type || "carrier"}<br/> <!-- 👈 TYPE SHOW -->
+     <b>Status:</b> ${i.status}<br/>
+     <b>Paid:</b> ${i.paid ? "YES" : "NO"}<br/>
+     <b>Time:</b> ${new Date(i.time).toLocaleString()}<br/>
+     <a href="/admin/delete/${i._id}" style="color:red;">🗑 DELETE</a>
+   </div>
+ `).join("")}
 
-const API_URL = "https://imei-info.onrender.com";
+ </body>
+ </html>
+ `);
+});
 
-let imei="", email="", type="carrier";
+/* =========================
+DELETE
+========================= */
+app.get("/admin/delete/:id", async (req, res) => {
+ await Check.findByIdAndDelete(req.params.id);
+ res.redirect("/admin");
+});
 
-/* OPEN OPTIONS */
-function openOptions(){
-  document.getElementById("modal").classList.add("show");
-}
-
-/* SELECT TYPE */
-function selectType(t){
-  type = t;
-  document.getElementById("modal").classList.remove("show");
-}
-
-/* CHECK */
-function check(){
-  imei = document.getElementById("imei").value.trim();
-  email = document.getElementById("email").value.trim();
-
-  if(!imei || !email){
-    alert("Fill all fields");
-    return;
-  }
-
-  document.getElementById("payBtn").style.display="block";
-}
-
-/* PAY */
-async function pay(){
-
-  const res = await fetch(API_URL + "/create-payment", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      deviceId: imei,
-      email: email,
-      type: type
-    })
-  });
-
-  const data = await res.json();
-
-  if(data.url){
-    window.location.href = data.url;
-  } else {
-    alert("Payment error");
-  }
-}
-
-</script>
-
-</body>
-</html>
+/* =========================
+START
+========================= */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("RUNNING ON", PORT));
