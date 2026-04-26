@@ -53,7 +53,7 @@ input{
   font-size:15px;
 }
 
-/* FIX LONG TEXT */
+/* VALUE */
 .value{
   padding:14px;
   font-size:15px;
@@ -132,7 +132,7 @@ button{
 const API_URL = "https://imei-info.onrender.com";
 
 let imei = "";
-let type = "carrier";
+let type = "";
 
 /* IMEI */
 function setIMEI(){
@@ -153,13 +153,13 @@ function setIMEI(){
   showType();
 }
 
-/* TYPE */
+/* TYPE (FIXED - NO DEFAULT ACTIVE) */
 function showType(){
 
   document.getElementById("typeBlock").innerHTML = `
     <div class="block">
 
-      <div class="row active" onclick="setType(this,'carrier')">
+      <div class="row" onclick="setType(this,'carrier')">
         Carrier status <span class="check">✓</span>
       </div>
 
@@ -207,7 +207,7 @@ function showEmail(){
   showPay();
 }
 
-/* PAY BUTTON */
+/* PAY */
 function showPay(){
 
   if(document.getElementById("payBlock").innerHTML) return;
@@ -219,13 +219,23 @@ function showPay(){
   `;
 }
 
-/* PAY */
+/* PAYMENT */
 async function payToCheck(){
 
   const email = document.getElementById("email").value.trim();
 
+  if(!imei){
+    alert("Enter IMEI");
+    return;
+  }
+
   if(!email){
     alert("Enter email");
+    return;
+  }
+
+  if(!type){
+    alert("Select type");
     return;
   }
 
