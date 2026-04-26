@@ -138,7 +138,19 @@ async (req, res) => {
 });
 
 /* =========================
-ADMIN PANEL (iOS STYLE + COPY)
+DELETE ORDER (NEW)
+========================= */
+app.get("/admin/delete/:id", async (req, res) => {
+ try {
+   await Check.findByIdAndDelete(req.params.id);
+   res.redirect("/admin");
+ } catch (err) {
+   res.status(500).send("Delete error");
+ }
+});
+
+/* =========================
+ADMIN PANEL (iOS STYLE + COPY + DELETE)
 ========================= */
 app.get("/admin", async (req, res) => {
  const data = await Check.find().sort({ time: -1 });
@@ -191,8 +203,10 @@ body{
  cursor:pointer;
 }
 
-.copy:active{
- opacity:0.5;
+.delete{
+ color:#ff3b30;
+ font-weight:600;
+ text-decoration:none;
 }
 </style>
 </head>
@@ -219,6 +233,10 @@ ${data.map(i => `
    <div class="row"><b>Type:</b> ${i.type}</div>
    <div class="row"><b>Status:</b> ${i.status}</div>
    <div class="row"><b>Paid:</b> ${i.paid ? "YES" : "NO"}</div>
+
+   <div class="row">
+     <a class="delete" href="/admin/delete/${i._id}">🗑 Delete</a>
+   </div>
 
  </div>
 `).join("")}
