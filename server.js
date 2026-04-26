@@ -12,7 +12,44 @@ MIDDLEWARE
 app.use(cors());
 app.use(cookieParser());
 
-/* IMPORTANT: JSON AFTER webhook raw handling */
+/* IMPORTANT: webhook raw BEFORE json */
+app.post("/stripe-webhook",
+express.raw({ type: "application/json" }),
+async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const deviceId = session.metadata?.deviceId;
+      const email = session.metadata?.email;
+      const type = session.metadata?.type;
+
+      await Order.updateOne(
+        { deviceId },
+        {
+          $set: {
+            email,
+            type,
+            paid: true,
+            status: "paid",
+            time: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
+
+    res.json({ ok: true });
+
+  } catch (err) {
+    console.log("Webhook error:", err.message);
+    res.status(400).send("Webhook error");
+  }
+});
+
+/* JSON AFTER webhook */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -100,46 +137,7 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
-WEBHOOK (IMPORTANT FIX)
-========================= */
-app.post("/stripe-webhook",
-express.raw({ type: "application/json" }),
-async (req, res) => {
-  try {
-    const event = JSON.parse(req.body.toString());
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-
-      const deviceId = session.metadata?.deviceId;
-      const email = session.metadata?.email;
-      const type = session.metadata?.type;
-
-      await Order.updateOne(
-        { deviceId },
-        {
-          $set: {
-            email,
-            type,
-            paid: true,
-            status: "paid",
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
-    }
-
-    res.json({ ok: true });
-
-  } catch (err) {
-    console.log("Webhook error:", err.message);
-    res.status(400).send("Webhook error");
-  }
-});
-
-/* =========================
-ADMIN PANEL (MOBILE IOS CLEAN)
+ADMIN PANEL (MOBILE IOS FIXED)
 ========================= */
 app.get("/admin", async (req, res) => {
   const data = await Order.find().sort({ time: -1 });
@@ -167,13 +165,7 @@ body{
 
 h2{
   font-size:20px;
-  margin-bottom:5px;
-}
-
-.sub{
-  font-size:13px;
-  color:#8e8e93;
-  margin-bottom:15px;
+  margin-bottom:10px;
 }
 
 .card{
@@ -192,7 +184,7 @@ h2{
 
 .copy{
   color:#0071e3;
-  font-weight:500;
+  font-weight:600;
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
@@ -216,7 +208,6 @@ h2{
 <div class="screen">
 
 <h2>📊 Admin Panel</h2>
-<div class="sub">Tap to copy</div>
 
 ${data.map(i => `
   <div class="card">
