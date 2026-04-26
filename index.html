@@ -9,8 +9,8 @@
 body{
   margin:0;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-  background:#000;
-  color:white;
+  background:#f2f2f7; /* 🔥 iOS GREY BACKGROUND */
+  color:#000;
 }
 
 .screen{
@@ -30,11 +30,12 @@ h2{
   margin-bottom:20px;
 }
 
-/* INPUT */
+/* INPUT BLOCK */
 .group{
-  background:#1c1c1e;
+  background:white;
   border-radius:14px;
   overflow:hidden;
+  border:1px solid #e5e5ea;
   margin-bottom:10px;
 }
 
@@ -44,14 +45,13 @@ input{
   border:none;
   outline:none;
   font-size:15px;
-  background:#1c1c1e;
-  color:white;
+  background:white;
 }
 
-/* SEGMENT CONTROL */
+/* SEGMENT */
 .segment{
   display:flex;
-  background:#1c1c1e;
+  background:#e5e5ea;
   border-radius:12px;
   overflow:hidden;
   margin-bottom:12px;
@@ -67,7 +67,7 @@ input{
   transition:0.2s;
 }
 
-/* 🔵 iOS BLUE SELECT */
+/* 🔵 ACTIVE BLUE */
 .seg.active{
   background:#0a84ff;
   color:white;
@@ -85,8 +85,8 @@ button{
 }
 
 .pay{
-  background:#30d158;
-  color:black;
+  background:#34c759;
+  color:white;
   font-weight:600;
 }
 </style>
@@ -99,24 +99,20 @@ button{
 <h2>iPhone IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- IMEI -->
 <div class="group">
   <input id="imei" placeholder="Enter IMEI">
 </div>
 
-<!-- TYPE SELECT -->
 <div class="segment">
   <div class="seg active" onclick="setType(this,'carrier')">Carrier</div>
   <div class="seg" onclick="setType(this,'findmy')">Find My</div>
   <div class="seg" onclick="setType(this,'blacklist')">Blacklist</div>
 </div>
 
-<!-- EMAIL -->
 <div class="group">
   <input id="email" placeholder="Email">
 </div>
 
-<!-- PAY BUTTON -->
 <button class="pay" onclick="payToCheck()">
   Pay to Check $1.99
 </button>
@@ -129,9 +125,7 @@ const API_URL = "https://imei-info.onrender.com";
 
 let type = "carrier";
 
-/* SELECT TYPE */
-function setType(el, t){
-
+function setType(el,t){
   type = t;
 
   document.querySelectorAll(".seg").forEach(e=>{
@@ -141,7 +135,6 @@ function setType(el, t){
   el.classList.add("active");
 }
 
-/* PAY */
 async function payToCheck(){
 
   const imei = document.getElementById("imei").value.trim();
