@@ -10,21 +10,14 @@ body{
   margin:0;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
   background:#f2f2f7;
-  overflow:hidden; /* 🔥 НЕ ДВИГАЕТСЯ ЭКРАН */
+  overflow:hidden;
 }
 
-/* FIXED SCREEN */
+/* 🔥 TOP LAYOUT (НЕ ЦЕНТР!) */
 .screen{
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-/* CARD */
-.card{
-  width:90%;
-  max-width:380px;
+  padding:50px 18px;
+  max-width:420px;
+  margin:0 auto;
 }
 
 /* HEADER */
@@ -39,16 +32,6 @@ h2{
   margin-bottom:20px;
 }
 
-/* INPUT */
-input{
-  width:100%;
-  padding:14px;
-  border:none;
-  outline:none;
-  font-size:15px;
-  background:white;
-}
-
 /* GROUP */
 .group{
   background:white;
@@ -56,6 +39,15 @@ input{
   overflow:hidden;
   border:1px solid #e5e5ea;
   margin-bottom:10px;
+}
+
+/* INPUT */
+input{
+  width:100%;
+  padding:14px;
+  border:none;
+  outline:none;
+  font-size:15px;
 }
 
 /* BUTTON */
@@ -66,7 +58,6 @@ button{
   border-radius:14px;
   margin-top:10px;
   font-size:15px;
-  cursor:pointer;
 }
 
 .main{
@@ -80,7 +71,7 @@ button{
   display:none;
 }
 
-/* OPTIONS MODAL */
+/* MODAL */
 .modal{
   position:fixed;
   bottom:-100%;
@@ -93,6 +84,7 @@ button{
   padding:20px;
 }
 
+/* OPEN */
 .modal.show{
   bottom:0;
 }
@@ -103,8 +95,10 @@ button{
   font-size:15px;
 }
 
-.opt:active{
-  background:#f2f2f7;
+/* 🔥 SELECTED STYLE */
+.opt.active{
+  background:#e8f0ff;
+  font-weight:600;
 }
 </style>
 </head>
@@ -113,22 +107,17 @@ button{
 
 <div class="screen">
 
-<div class="card">
-
 <h2>iPhone IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- IMEI -->
 <div class="group">
   <input id="imei" placeholder="Enter IMEI">
 </div>
 
-<!-- OPTIONS BUTTON -->
 <button class="main" onclick="openOptions()">
   Options
 </button>
 
-<!-- EMAIL -->
 <div class="group">
   <input id="email" placeholder="Email">
 </div>
@@ -138,14 +127,12 @@ button{
 
 </div>
 
-</div>
-
 <!-- MODAL -->
 <div id="modal" class="modal">
 
-  <div class="opt" onclick="selectType('carrier')">Carrier status</div>
-  <div class="opt" onclick="selectType('findmy')">Find My iPhone</div>
-  <div class="opt" onclick="selectType('blacklist')">Blacklist check</div>
+  <div class="opt" onclick="selectType(this,'carrier')">Carrier status</div>
+  <div class="opt" onclick="selectType(this,'findmy')">Find My iPhone</div>
+  <div class="opt" onclick="selectType(this,'blacklist')">Blacklist check</div>
 
 </div>
 
@@ -154,16 +141,29 @@ button{
 const API_URL = "https://imei-info.onrender.com";
 
 let imei="", email="", type="carrier";
+let selectedEl = null;
 
-/* OPEN OPTIONS */
+/* OPEN */
 function openOptions(){
   document.getElementById("modal").classList.add("show");
 }
 
 /* SELECT TYPE */
-function selectType(t){
+function selectType(el, t){
   type = t;
+
+  // remove old highlight
+  if(selectedEl){
+    selectedEl.classList.remove("active");
+  }
+
+  // add new highlight
+  el.classList.add("active");
+  selectedEl = el;
+
   document.getElementById("modal").classList.remove("show");
+
+  console.log("TYPE SELECTED:", type); // 🔥 DEBUG
 }
 
 /* CHECK */
@@ -176,11 +176,17 @@ function check(){
     return;
   }
 
+  if(!type){
+    type = "carrier";
+  }
+
   document.getElementById("payBtn").style.display="block";
 }
 
 /* PAY */
 async function pay(){
+
+  console.log("SEND:", {imei, email, type}); // 🔥 DEBUG
 
   const res = await fetch(API_URL + "/create-payment", {
     method:"POST",
