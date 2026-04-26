@@ -1,121 +1,110 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMEI CHECK</title>
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iPhone IMEI Check</title>
 
-<body style="font-family: Arial; text-align: center; margin-top: 80px; padding:10px; background:#f2f2f2;">
-
-<h2>IMEI CHECK</h2>
-
-<p style="color:green; font-size:18px;">
-  Price: $1.99
-</p>
-
-<input id="imei" placeholder="enter imei"
-style="padding:10px; width:90%; max-width:250px; font-size:16px; border-radius:6px; border:1px solid #ccc;" />
-
-<br><br>
-
-<input id="email" placeholder="enter email"
-style="padding:10px; width:90%; max-width:250px; font-size:16px; border-radius:6px; border:1px solid #ccc;" />
-
-<br><br>
-
-<button onclick="check()"
-style="padding:10px 20px; font-size:16px; border-radius:6px; border:none; background:#333; color:white;">
-Check
-</button>
-
-<button id="payBtn" onclick="pay()"
-style="display:none; padding:10px 20px; font-size:16px; margin-top:10px; background:green; color:white; border:none; border-radius:6px;">
-Pay $1.99
-</button>
-
-<div id="spinner" style="display:none; margin-top:15px;">
-  <div style="
-    width:30px;
-    height:30px;
-    border:4px solid #ccc;
-    border-top:4px solid #333;
-    border-radius:50%;
-    margin:0 auto;
-    animation: spin 1s linear infinite;
-  "></div>
-</div>
-
-<div id="resultCard" style="
-  display:none;
-  margin-top:20px;
-  padding:15px;
-  border-radius:10px;
-  width:90%;
-  max-width:320px;
-  margin-left:auto;
-  margin-right:auto;
-  background:white;
-  font-size:18px;
-  box-shadow:0 2px 10px rgba(0,0,0,0.1);
-"></div>
-
-<script>
-const API_URL = "https://imei-info.onrender.com";
-
-let currentIMEI = "";
-let currentEmail = "";
-
-/* CHECK */
-async function check() {
-  const imei = document.getElementById("imei").value.trim();
-  const email = document.getElementById("email").value.trim();
-
-  if (!imei) return alert("Enter IMEI");
-  if (!email) return alert("Enter email");
-
-  currentIMEI = imei;
-  currentEmail = email;
-
-  document.getElementById("spinner").style.display = "block";
-
-  await fetch(API_URL + "/check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      deviceId: imei,
-      email: email
-    })
-  });
-
-  document.getElementById("spinner").style.display = "none";
-  document.getElementById("payBtn").style.display = "inline-block";
-
-  document.getElementById("resultCard").style.display = "block";
-  document.getElementById("resultCard").innerHTML =
-    "📌 Request created. Now pay to continue.";
+<style>
+body{
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+  background:#f5f5f7;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 
-/* PAY */
-async function pay() {
-  if (!currentIMEI || !currentEmail) return alert("Fill data first");
+.card{
+  width:340px;
+  background:white;
+  padding:26px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  text-align:center;
+}
 
-  const res = await fetch(API_URL + "/create-payment", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      deviceId: currentIMEI,
-      email: currentEmail
-    })
-  });
+h2{
+  margin:0;
+  font-size:22px;
+  font-weight:600;
+  color:#111;
+}
 
-  const data = await res.json();
+.small{
+  margin-top:6px;
+  font-size:12px;
+  color:#888;
+}
 
-  if (data.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Payment error");
+input{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:12px;
+  border:1px solid #e5e5e5;
+  outline:none;
+  font-size:15px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  cursor:pointer;
+}
+
+.check{
+  background:#0071e3;
+  color:white;
+}
+
+.pay{
+  background:#34c759;
+  color:white;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h2>iPhone IMEI Check</h2>
+
+  <div class="small">Only for Apple devices</div>
+
+  <input id="imei" placeholder="Enter IMEI">
+  <input id="email" placeholder="Enter Email">
+
+  <button class="check" onclick="check()">Check</button>
+  <button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
+
+</div>
+
+<script>
+let imei = "";
+let email = "";
+
+function check(){
+  imei = document.getElementById("imei").value;
+  email = document.getElementById("email").value;
+
+  if(!imei || !email){
+    alert("Fill all fields");
+    return;
   }
+
+  document.getElementById("payBtn").style.display="block";
+}
+
+function pay(){
+  alert("Connect backend here");
 }
 </script>
 
