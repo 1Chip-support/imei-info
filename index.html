@@ -29,37 +29,21 @@ h2{
   margin-bottom:20px;
 }
 
-/* INPUT */
-.group{
+/* BLOCK */
+.block{
   background:white;
   border-radius:14px;
-  overflow:hidden;
   border:1px solid #e5e5ea;
+  padding:14px;
   margin-bottom:12px;
 }
 
-input{
-  width:100%;
-  padding:14px;
-  border:none;
-  outline:none;
-  font-size:15px;
-}
-
 /* LIST */
-.list{
-  background:white;
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid #e5e5ea;
-}
-
 .row{
-  padding:14px;
+  padding:14px 0;
   display:flex;
   justify-content:space-between;
   cursor:pointer;
-  font-size:15px;
 }
 
 .row .check{
@@ -76,6 +60,15 @@ input{
   background:#e5e5ea;
 }
 
+/* INPUT */
+input{
+  width:100%;
+  padding:14px;
+  border:none;
+  outline:none;
+  font-size:15px;
+}
+
 /* BUTTON */
 button{
   width:100%;
@@ -84,12 +77,7 @@ button{
   border-radius:14px;
   font-size:15px;
   cursor:pointer;
-  margin-top:12px;
-}
-
-.next{
-  background:#0071e3;
-  color:white;
+  margin-top:10px;
 }
 
 .pay{
@@ -97,9 +85,6 @@ button{
   color:white;
   font-weight:600;
 }
-
-/* STEPS */
-.hidden{ display:none; }
 </style>
 </head>
 
@@ -110,60 +95,20 @@ button{
 <h2>iPhone IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- STEP 1: IMEI -->
-<div id="step1">
-
-  <div class="group">
-    <input id="imei" placeholder="Enter IMEI">
-  </div>
-
-  <button class="next" onclick="goStep2()">
-    Continue
-  </button>
-
+<!-- IMEI -->
+<div class="block">
+  <input id="imei" placeholder="Enter IMEI">
+  <button onclick="addType()">Continue</button>
 </div>
 
-<!-- STEP 2: TYPE -->
-<div id="step2" class="hidden">
+<!-- TYPE (ADDED BELOW) -->
+<div id="typeBlock"></div>
 
-  <div class="list">
+<!-- EMAIL (ADDED BELOW) -->
+<div id="emailBlock"></div>
 
-    <div class="row active" onclick="setType(this,'carrier')">
-      Carrier status <span class="check">✓</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row" onclick="setType(this,'findmy')">
-      Find My iPhone <span class="check">✓</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row" onclick="setType(this,'blacklist')">
-      Blacklist check <span class="check">✓</span>
-    </div>
-
-  </div>
-
-  <button class="next" onclick="goStep3()">
-    Next
-  </button>
-
-</div>
-
-<!-- STEP 3: EMAIL -->
-<div id="step3" class="hidden">
-
-  <div class="group">
-    <input id="email" placeholder="Enter email">
-  </div>
-
-  <button class="pay" onclick="payToCheck()">
-    Pay $1.99
-  </button>
-
-</div>
+<!-- PAY (ADDED BELOW) -->
+<div id="payBlock"></div>
 
 </div>
 
@@ -174,8 +119,9 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "carrier";
 
-/* STEP 1 → STEP 2 */
-function goStep2(){
+/* STEP 1 */
+function addType(){
+
   imei = document.getElementById("imei").value.trim();
 
   if(!imei){
@@ -183,12 +129,36 @@ function goStep2(){
     return;
   }
 
-  document.getElementById("step1").classList.add("hidden");
-  document.getElementById("step2").classList.remove("hidden");
+  if(document.getElementById("typeBlock").innerHTML) return;
+
+  document.getElementById("typeBlock").innerHTML = `
+    <div class="block">
+
+      <div class="row active" onclick="setType(this,'carrier')">
+        Carrier status <span class="check">✓</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row" onclick="setType(this,'findmy')">
+        Find My iPhone <span class="check">✓</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row" onclick="setType(this,'blacklist')">
+        Blacklist check <span class="check">✓</span>
+      </div>
+
+      <button onclick="addEmail()">Next</button>
+
+    </div>
+  `;
 }
 
 /* TYPE SELECT */
 function setType(el,t){
+
   type = t;
 
   document.querySelectorAll(".row").forEach(e=>{
@@ -198,10 +168,31 @@ function setType(el,t){
   el.classList.add("active");
 }
 
-/* STEP 2 → STEP 3 */
-function goStep3(){
-  document.getElementById("step2").classList.add("hidden");
-  document.getElementById("step3").classList.remove("hidden");
+/* STEP 2 */
+function addEmail(){
+
+  if(document.getElementById("emailBlock").innerHTML) return;
+
+  document.getElementById("emailBlock").innerHTML = `
+    <div class="block">
+      <input id="email" placeholder="Enter email">
+      <button onclick="addPay()">Continue to payment</button>
+    </div>
+  `;
+}
+
+/* STEP 3 */
+function addPay(){
+
+  if(document.getElementById("payBlock").innerHTML) return;
+
+  document.getElementById("payBlock").innerHTML = `
+    <div class="block">
+      <button class="pay" onclick="payToCheck()">
+        Pay $1.99
+      </button>
+    </div>
+  `;
 }
 
 /* PAY */
