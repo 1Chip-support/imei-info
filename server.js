@@ -24,7 +24,8 @@ MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
  deviceId: { type: String, unique: true },
- type: { type: String, default: "carrier" }, // 👈 ДОБАВИЛ TYPE
+ email: { type: String, default: "" },   // 👈 ADD EMAIL
+ type: { type: String, default: "carrier" },
  status: { type: String, default: "pending" },
  price: { type: Number, default: 1.99 },
  paid: { type: Boolean, default: false },
@@ -42,13 +43,12 @@ async (req, res) => {
  try {
    const event = JSON.parse(req.body.toString());
 
-   console.log("🔥 WEBHOOK:", event.type);
-
    if (event.type === "checkout.session.completed") {
      const session = event.data.object;
 
      const deviceId = session.metadata?.deviceId;
-     const type = session.metadata?.type; // 👈 TYPE
+     const email = session.metadata?.email; // 👈 EMAIL FROM STRIPE
+     const type = session.metadata?.type;
 
      if (!deviceId) return res.json({ ok: true });
 
@@ -57,29 +57,27 @@ async (req, res) => {
        {
          $set: {
            deviceId,
-           type, // 👈 SAVE TYPE
+           email,
+           type,
            paid: true,
            status: "paid",
-           price: 1.99,
            time: new Date()
          }
        },
        { upsert: true }
      );
-
-     console.log("💰 PAYMENT SAVED:", deviceId, type);
    }
 
    res.json({ received: true });
 
  } catch (err) {
-   console.log("WEBHOOK ERROR:", err.message);
+   console.log(err.message);
    res.status(400).send("Webhook error");
  }
 });
 
 /* =========================
-JSON PARSER
+JSON
 ========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -89,11 +87,22 @@ CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
  try {
-   const { deviceId, type } = req.body; // 👈 TYPE
+   const { deviceId, email, type } = req.body; // 👈 EMAIL + TYPE
 
    if (!deviceId) {
      return res.status(400).json({ error: "deviceId missing" });
    }
+
+   await Check.updateOne(
+     { deviceId },
+     {
+       $set: {
+         email,
+         type
+       }
+     },
+     { upsert: true }
+   );
 
    const session = await stripe.checkout.sessions.create({
      payment_method_types: ["card"],
@@ -101,14 +110,17 @@ app.post("/create-payment", async (req, res) => {
      line_items: [{
        price_data: {
          currency: "usd",
-         product_data: { name: "IMEI Check (" + (type || "carrier") + ")" },
+         product_data: {
+           name: `IMEI Check (${type || "carrier"})`
+         },
          unit_amount: 199
        },
        quantity: 1
      }],
      metadata: {
        deviceId,
-       type // 👈 SEND TYPE TO STRIPE
+       email,   // 👈 IMPORTANT
+       type
      },
      success_url: "https://imei-info.pages.dev",
      cancel_url: "https://imei-info.pages.dev"
@@ -122,7 +134,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-CHECK IMEI
+CHECK
 ========================= */
 app.post("/check", async (req, res) => {
  try {
@@ -156,7 +168,8 @@ app.get("/admin", async (req, res) => {
  ${data.map(i => `
    <div style="background:#222;padding:10px;margin:10px;border-radius:8px;">
      <b>IMEI:</b> ${i.deviceId}<br/>
-     <b>Type:</b> ${i.type || "carrier"}<br/> <!-- 👈 TYPE SHOW -->
+     <b>Email:</b> ${i.email || "-"}<br/>   <!-- 👈 EMAIL FIX -->
+     <b>Type:</b> ${i.type || "carrier"}<br/>
      <b>Status:</b> ${i.status}<br/>
      <b>Paid:</b> ${i.paid ? "YES" : "NO"}<br/>
      <b>Time:</b> ${new Date(i.time).toLocaleString()}<br/>
