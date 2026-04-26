@@ -6,7 +6,6 @@
 <title>IMEI Check</title>
 
 <style>
-/* RESET */
 *{
   box-sizing:border-box;
 }
@@ -15,17 +14,15 @@ body{
   margin:0;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
   background:#f2f2f7;
-  overflow-x:hidden; /* 🔥 FIX horizontal scroll */
+  overflow-x:hidden;
 }
 
-/* SAFE AREA iOS */
 .screen{
   padding:55px 16px calc(40px + env(safe-area-inset-bottom));
   max-width:420px;
   margin:0 auto;
 }
 
-/* TITLE */
 h2{
   font-size:22px;
   font-weight:600;
@@ -45,28 +42,25 @@ h2{
   border:1px solid #e5e5ea;
   padding:12px;
   margin-bottom:12px;
-  width:100%;
 }
 
-/* FIX INPUT OVERFLOW */
+/* INPUT */
 input{
   width:100%;
-  max-width:100%;
   padding:14px;
   border:none;
   outline:none;
   font-size:15px;
-  background:#fff;
 }
 
-/* VALUE DISPLAY */
+/* FIX LONG TEXT */
 .value{
   padding:14px;
   font-size:15px;
-  word-break:break-all; /* 🔥 FIX LONG IMEI OVERFLOW */
+  word-break:break-all;
 }
 
-/* ROWS */
+/* ROW */
 .row{
   padding:14px;
   display:flex;
@@ -98,18 +92,13 @@ button{
   font-size:15px;
   cursor:pointer;
   margin-top:10px;
+  -webkit-appearance:none;
 }
 
 .pay{
   background:#34c759;
   color:white;
   font-weight:600;
-}
-
-/* FIX iOS ZOOM / INPUT BUG */
-input, button{
-  -webkit-appearance:none;
-  appearance:none;
 }
 </style>
 </head>
@@ -145,7 +134,7 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "carrier";
 
-/* IMEI STEP */
+/* IMEI */
 function setIMEI(){
 
   imei = document.getElementById("imeiInput").value.trim();
@@ -190,7 +179,7 @@ function showType(){
   `;
 }
 
-/* TYPE SELECT */
+/* SELECT TYPE */
 function setType(el,t){
 
   type = t;
@@ -218,19 +207,19 @@ function showEmail(){
   showPay();
 }
 
-/* PAY */
+/* PAY BUTTON */
 function showPay(){
 
   if(document.getElementById("payBlock").innerHTML) return;
 
   document.getElementById("payBlock").innerHTML = `
     <button class="pay" onclick="payToCheck()">
-      Pay $1.99
+      Pay to Check $1.99
     </button>
   `;
 }
 
-/* PAY REQUEST */
+/* PAY */
 async function payToCheck(){
 
   const email = document.getElementById("email").value.trim();
