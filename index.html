@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>iPhone IMEI Check</title>
 
 <style>
@@ -14,46 +14,54 @@ body{
   justify-content:center;
   align-items:center;
   height:100vh;
+  overflow:hidden; /* ❗ фикс без скролла */
 }
 
+/* 📱 iPhone frame feel */
 .card{
-  width:340px;
+  width:360px;              /* фикс как iPhone */
+  max-width:90%;
   background:white;
-  padding:26px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  padding:22px;
+  border-radius:22px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.12);
   text-align:center;
 }
 
+/* title */
 h2{
   margin:0;
-  font-size:22px;
+  font-size:20px;
   font-weight:600;
   color:#111;
 }
 
+/* small ios subtitle */
 .small{
   margin-top:6px;
   font-size:12px;
-  color:#888;
+  color:#8e8e93;
 }
 
+/* inputs ios style */
 input{
   width:100%;
   padding:12px;
   margin:8px 0;
-  border-radius:12px;
-  border:1px solid #e5e5e5;
+  border-radius:14px;
+  border:1px solid #e5e5ea;
   outline:none;
   font-size:15px;
+  background:#f9f9fb;
 }
 
+/* buttons ios */
 button{
   width:100%;
   padding:12px;
   margin-top:10px;
   border:none;
-  border-radius:12px;
+  border-radius:14px;
   font-size:15px;
   cursor:pointer;
 }
@@ -68,32 +76,39 @@ button{
   color:white;
   display:none;
 }
+
+/* ❗ пустые поля слева/справа (illusion iPhone spacing) */
+.wrapper{
+  width:100%;
+  display:flex;
+  justify-content:center;
+}
 </style>
 </head>
 
 <body>
 
+<div class="wrapper">
+
 <div class="card">
 
   <h2>iPhone IMEI Check</h2>
-
   <div class="small">Only for Apple devices</div>
 
-  <input id="imei" placeholder="Enter IMEI">
-  <input id="email" placeholder="Enter Email">
+  <input id="imei" placeholder="IMEI">
+  <input id="email" placeholder="Email">
 
   <button class="check" onclick="check()">Check</button>
   <button id="payBtn" class="pay" onclick="pay()">Pay $1.99</button>
 
 </div>
 
-<script>
-let imei = "";
-let email = "";
+</div>
 
+<script>
 function check(){
-  imei = document.getElementById("imei").value;
-  email = document.getElementById("email").value;
+  const imei = document.getElementById("imei").value;
+  const email = document.getElementById("email").value;
 
   if(!imei || !email){
     alert("Fill all fields");
