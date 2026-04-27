@@ -38,6 +38,21 @@ color:#8e8e93;
 margin-bottom:20px;
 }
 
+/* LOGO */
+.logo{
+display:flex;
+justify-content:center;
+margin-bottom:15px;
+}
+
+.logo img{
+width:95px;
+height:95px;
+border-radius:50%;
+object-fit:cover;
+box-shadow:0 10px 25px rgba(0,0,0,0.15);
+}
+
 .block{
 background:#fff;
 border-radius:14px;
@@ -84,7 +99,6 @@ border-radius:14px;
 font-size:15px;
 cursor:pointer;
 margin-top:10px;
--webkit-appearance:none;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
@@ -118,10 +132,14 @@ color:#8e8e93;
 
 <div class="screen">
 
+<!-- LOGO (FIXED) -->
+<div class="logo">
+  <img src="images/logo.jpeg" alt="logo">
+</div>
+
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- IMEI / SN INPUT -->
 <div class="block" id="imeiBlock">
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
@@ -140,15 +158,12 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "";
 
-/* IMEI / SN CHECK */
+/* IMEI / SN */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-// IMEI check (15 digits)
 const isIMEI = /^\d{15}$/.test(imei);
-
-// SN check (10–12 letters/numbers)
 const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
