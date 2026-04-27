@@ -22,15 +22,6 @@ mongoose.connect(process.env.MONGO_URL)
  .catch(err => console.log("MongoDB error:", err));
 
 /* =========================
-VALIDATION (IMEI / SN)
-========================= */
-function isValidDeviceId(deviceId){
-  const isIMEI = /^\d{15}$/.test(deviceId);
-  const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
-  return isIMEI || isSN;
-}
-
-/* =========================
 MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
@@ -52,8 +43,8 @@ app.post("/create-payment", async (req, res) => {
  try {
    const { deviceId, email, type } = req.body;
 
-   if (!deviceId || !isValidDeviceId(deviceId)) {
-     return res.status(400).json({ error: "Invalid IMEI / SN" });
+   if (!deviceId) {
+     return res.status(400).json({ error: "deviceId missing" });
    }
 
    await Check.updateOne(
@@ -88,15 +79,11 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-CHECK RESULT
+CHECK
 ========================= */
 app.post("/check", async (req, res) => {
  try {
    const { deviceId } = req.body;
-
-   if (!isValidDeviceId(deviceId)) {
-     return res.status(400).json({ status: "invalid_id" });
-   }
 
    const data = await Check.findOne({ deviceId });
 
@@ -127,21 +114,19 @@ async (req, res) => {
      const email = session.metadata?.email;
      const type = session.metadata?.type;
 
-     if (deviceId && isValidDeviceId(deviceId)) {
-       await Check.updateOne(
-         { deviceId },
-         {
-           $set: {
-             email,
-             type,
-             paid: true,
-             status: "paid",
-             time: new Date()
-           }
-         },
-         { upsert: true }
-       );
-     }
+     await Check.updateOne(
+       { deviceId },
+       {
+         $set: {
+           email,
+           type,
+           paid: true,
+           status: "paid",
+           time: new Date()
+         }
+       },
+       { upsert: true }
+     );
    }
 
    res.json({ received: true });
@@ -165,10 +150,13 @@ app.get("/admin/delete/:id", async (req, res) => {
 });
 
 /* =========================
-ADMIN PANEL
+ADMIN PANEL (PAID / UNPAID SPLIT)
 ========================= */
 app.get("/admin", async (req, res) => {
  const data = await Check.find().sort({ time: -1 });
+
+ const paid = data.filter(i => i.paid === true);
+ const unpaid = data.filter(i => i.paid !== true);
 
  res.send(`
 <!DOCTYPE html>
@@ -179,38 +167,100 @@ app.get("/admin", async (req, res) => {
 <title>Admin Panel</title>
 
 <style>
-body{margin:0;font-family:-apple-system;background:#f2f2f7;}
-.container{max-width:520px;margin:auto;padding:16px;}
-.card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
-.copy{color:#0071e3;cursor:pointer;}
-.delete{color:red;text-decoration:none;}
+body{
+margin:0;
+font-family:-apple-system;
+background:#f2f2f7;
+}
+
+.container{
+max-width:600px;
+margin:auto;
+padding:16px;
+}
+
+.title{
+font-size:22px;
+font-weight:700;
+margin-bottom:10px;
+}
+
+.section{
+margin-top:20px;
+}
+
+.section h3{
+font-size:16px;
+margin:10px 0;
+}
+
+.card{
+background:#fff;
+padding:12px;
+margin-bottom:10px;
+border-radius:12px;
+border:1px solid #e5e5ea;
+}
+
+.badge-paid{
+color:#34c759;
+font-weight:700;
+}
+
+.badge-unpaid{
+color:#ff3b30;
+font-weight:700;
+}
+
+.copy{
+color:#0071e3;
+cursor:pointer;
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
-<h2>Admin Panel</h2>
+<div class="title">📊 Admin Panel</div>
 
-${data.map(i => `
+<!-- PAID -->
+<div class="section">
+<h3>✅ Paid Users (${paid.length})</h3>
+
+${paid.map(i => `
 <div class="card">
-
-<div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-<div><b>Email:</b> ${i.email || "-"}</div>
-<div><b>Type:</b> ${i.type}</div>
-<div><b>Paid:</b> ${i.paid ? "YES" : "NO"}</div>
-
-<a class="delete" href="/admin/delete/${i._id}">Delete</a>
-
+  <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
+  <div><b>Email:</b> ${i.email || "-"}</div>
+  <div><b>Type:</b> ${i.type}</div>
+  <div><b>Status:</b> <span class="badge-paid">PAID</span></div>
 </div>
 `).join("")}
+
+</div>
+
+<!-- UNPAID -->
+<div class="section">
+<h3>❌ Unpaid Users (${unpaid.length})</h3>
+
+${unpaid.map(i => `
+<div class="card">
+  <div><b>ID:</b> ${i.deviceId}</div>
+  <div><b>Email:</b> ${i.email || "-"}</div>
+  <div><b>Type:</b> ${i.type}</div>
+  <div><b>Status:</b> <span class="badge-unpaid">PENDING</span></div>
+</div>
+`).join("")}
+
+</div>
 
 </div>
 
 <script>
 function copyText(t){
 navigator.clipboard.writeText(t);
-alert("Copied");
+alert("Copied: " + t);
 }
 </script>
 
@@ -220,7 +270,7 @@ alert("Copied");
 });
 
 /* =========================
-START SERVER
+START
 ========================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUNNING ON", PORT));
