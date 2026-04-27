@@ -38,7 +38,6 @@ h2{
  margin-bottom:20px;
 }
 
-/* BLOCK */
 .block{
  background:#fff;
  border-radius:14px;
@@ -47,7 +46,6 @@ h2{
  margin-bottom:12px;
 }
 
-/* INPUT */
 input{
  width:100%;
  padding:14px;
@@ -56,14 +54,13 @@ input{
  font-size:15px;
 }
 
-/* VALUE */
 .value{
  padding:14px;
  font-size:15px;
  word-break:break-all;
 }
 
-/* 🔵 TYPE ROW (APPLE STYLE) */
+/* TYPE */
 .row{
  padding:14px;
  cursor:pointer;
@@ -90,7 +87,6 @@ button{
  cursor:pointer;
  margin-top:10px;
  -webkit-appearance:none;
-
  background:#0a84ff;
  color:#fff;
  font-weight:600;
@@ -101,6 +97,24 @@ button{
  background:#34c759;
  color:white;
  font-weight:600;
+}
+
+/* ERROR */
+.error{
+ background:#ff3b30;
+ color:#fff;
+ padding:12px;
+ border-radius:12px;
+ font-size:14px;
+ margin-bottom:10px;
+}
+
+/* LOADING */
+.loading{
+ text-align:center;
+ padding:20px;
+ font-size:14px;
+ color:#8e8e93;
 }
 </style>
 </head>
@@ -118,13 +132,8 @@ button{
  <button onclick="setIMEI()">Continue</button>
 </div>
 
-<!-- TYPE -->
 <div id="typeBlock"></div>
-
-<!-- EMAIL -->
 <div id="emailBlock"></div>
-
-<!-- PAY -->
 <div id="payBlock"></div>
 
 </div>
@@ -136,23 +145,37 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "";
 
-/* IMEI */
+/* IMEI CHECK */
 function setIMEI(){
 
  imei = document.getElementById("imeiInput").value.trim();
 
- if(!imei){
-   alert("Enter IMEI");
+ // validation
+ if(!/^\d{15}$/.test(imei)){
+   document.getElementById("imeiBlock").innerHTML = `
+     <div class="error">
+       ❌ Invalid IMEI<br>
+       Must be exactly 15 digits
+     </div>
+     <input id="imeiInput" placeholder="Enter IMEI">
+     <button onclick="setIMEI()">Continue</button>
+   `;
    return;
  }
 
+ // loading
  document.getElementById("imeiBlock").innerHTML = `
-   <div class="value">
-     IMEI: <b>${imei}</b>
-   </div>
+   <div class="loading">Checking device...</div>
  `;
 
- showType();
+ setTimeout(()=>{
+   document.getElementById("imeiBlock").innerHTML = `
+     <div class="value">
+       IMEI: <b>${imei}</b>
+     </div>
+   `;
+   showType();
+ }, 1200);
 }
 
 /* TYPE */
@@ -177,7 +200,6 @@ function showType(){
  `;
 }
 
-/* SELECT TYPE */
 function setType(el,t){
 
  type = t;
@@ -222,18 +244,8 @@ async function payToCheck(){
 
  const email = document.getElementById("email").value.trim();
 
- if(!imei){
-   alert("Enter IMEI");
-   return;
- }
-
- if(!email){
-   alert("Enter email");
-   return;
- }
-
- if(!type){
-   alert("Select type");
+ if(!imei || !type || !email){
+   alert("Fill all fields");
    return;
  }
 
