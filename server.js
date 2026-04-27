@@ -99,41 +99,34 @@ app.post("/check", async (req, res) => {
 });
 
 /* =========================
-WEBHOOK (FIXED ✔)
+WEBHOOK
 ========================= */
 app.post("/stripe-webhook",
-express.raw({ type: "*/*" }),   // 🔥 FIX HERE
+express.raw({ type: "application/json" }),
 async (req, res) => {
  try {
    const event = JSON.parse(req.body.toString());
 
-   console.log("WEBHOOK:", event.type);
-
    if (event.type === "checkout.session.completed") {
-
      const session = event.data.object;
 
      const deviceId = session.metadata?.deviceId;
      const email = session.metadata?.email;
      const type = session.metadata?.type;
 
-     console.log("PAID DEVICE:", deviceId);
-
-     if (deviceId) {
-       await Check.updateOne(
-         { deviceId },
-         {
-           $set: {
-             email,
-             type,
-             paid: true,
-             status: "paid",
-             time: new Date()
-           }
-         },
-         { upsert: true }
-       );
-     }
+     await Check.updateOne(
+       { deviceId },
+       {
+         $set: {
+           email,
+           type,
+           paid: true,
+           status: "paid",
+           time: new Date()
+         }
+       },
+       { upsert: true }
+     );
    }
 
    res.json({ received: true });
@@ -145,7 +138,7 @@ async (req, res) => {
 });
 
 /* =========================
-DELETE ORDER
+DELETE ORDER (NEW)
 ========================= */
 app.get("/admin/delete/:id", async (req, res) => {
  try {
@@ -157,7 +150,7 @@ app.get("/admin/delete/:id", async (req, res) => {
 });
 
 /* =========================
-ADMIN PANEL
+ADMIN PANEL (iOS STYLE + COPY + DELETE)
 ========================= */
 app.get("/admin", async (req, res) => {
  const data = await Check.find().sort({ time: -1 });
@@ -167,15 +160,54 @@ app.get("/admin", async (req, res) => {
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Admin Panel</title>
 
 <style>
-body{margin:0;font-family:-apple-system;background:#f2f2f7;}
-.container{max-width:520px;margin:auto;padding:16px;}
-.card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
-.copy{color:#0071e3;cursor:pointer;}
-.delete{color:red;text-decoration:none;}
+body{
+ margin:0;
+ font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+ background:#f2f2f7;
+ color:#000;
+}
+
+.container{
+ max-width:520px;
+ margin:0 auto;
+ padding:16px;
+}
+
+.title{
+ font-size:22px;
+ font-weight:700;
+ margin-bottom:15px;
+}
+
+.card{
+ background:#fff;
+ border-radius:14px;
+ padding:12px;
+ margin-bottom:10px;
+ border:1px solid #e5e5ea;
+}
+
+.row{
+ font-size:14px;
+ margin:6px 0;
+ word-break:break-all;
+}
+
+.copy{
+ color:#0071e3;
+ font-weight:500;
+ cursor:pointer;
+}
+
+.delete{
+ color:#ff3b30;
+ font-weight:600;
+ text-decoration:none;
+}
 </style>
 </head>
 
@@ -183,33 +215,45 @@ body{margin:0;font-family:-apple-system;background:#f2f2f7;}
 
 <div class="container">
 
-<h2>Admin Panel</h2>
+<div class="title">📊 Admin Panel</div>
 
 ${data.map(i => `
-<div class="card">
+ <div class="card">
 
-<div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-<div><b>Email:</b> <span class="copy" onclick="copyText('${i.email || ""}')">${i.email || "-"}</span></div>
-<div><b>Type:</b> ${i.type}</div>
-<div><b>Paid:</b> ${i.paid ? "YES" : "NO"}</div>
+   <div class="row">
+     <b>IMEI:</b>
+     <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span>
+   </div>
 
-<a class="delete" href="/admin/delete/${i._id}">Delete</a>
+   <div class="row">
+     <b>Email:</b>
+     <span class="copy" onclick="copyText('${i.email || ""}')">${i.email || "-"}</span>
+   </div>
 
-</div>
+   <div class="row"><b>Type:</b> ${i.type}</div>
+   <div class="row"><b>Status:</b> ${i.status}</div>
+   <div class="row"><b>Paid:</b> ${i.paid ? "YES" : "NO"}</div>
+
+   <div class="row">
+     <a class="delete" href="/admin/delete/${i._id}">🗑 Delete</a>
+   </div>
+
+ </div>
 `).join("")}
 
 </div>
 
 <script>
-function copyText(t){
-navigator.clipboard.writeText(t);
-alert("Copied: " + t);
+function copyText(text){
+ if(!text) return;
+ navigator.clipboard.writeText(text);
+ alert("Copied: " + text);
 }
 </script>
 
 </body>
 </html>
-`);
+ `);
 });
 
 /* =========================
