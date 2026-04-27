@@ -1,267 +1,243 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+const mongoose = require("mongoose");
+const express = require("express");
+const cors = require("cors");
+const stripe = require("stripe")(process.env.STRIPE_SECRET || "");
+const cookieParser = require("cookie-parser");
 
-<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+const app = express();
 
-<title>IMEI Check</title>
+/* =========================
+WEBHOOK (RAW BODY MUST BE FIRST)
+========================= */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+ try {
+   const event = JSON.parse(req.body.toString());
 
-<style>
-*{
-box-sizing:border-box;
-}
+   console.log("🔥 WEBHOOK:", event.type);
 
-body{
-margin:0;
-font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-background:#f2f2f7;
-overflow-x:hidden;
-}
+   if (event.type === "checkout.session.completed") {
+     const session = event.data.object;
 
-.screen{
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
-max-width:420px;
-margin:0 auto;
-}
+     const deviceId = session.metadata?.deviceId;
+     const email = session.metadata?.email;
+     const type = session.metadata?.type;
 
-h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px 0;
-}
+     if (deviceId) {
+       await Check.updateOne(
+         { deviceId },
+         {
+           $set: {
+             deviceId,
+             email,
+             type,
+             paid: true,
+             status: "paid",
+             price: 1.99,
+             time: new Date()
+           }
+         },
+         { upsert: true }
+       );
 
-.sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
-}
+       console.log("💰 PAYMENT SAVED:", deviceId);
+     }
+   }
 
-/* BLOCK */
-.block{
-background:#fff;
-border-radius:14px;
-border:1px solid #e5e5ea;
-padding:12px;
-margin-bottom:12px;
-}
+   res.json({ received: true });
 
-/* INPUT */
-input{
-width:100%;
-padding:14px;
-border:none;
-outline:none;
-font-size:15px;
-}
-
-/* VALUE */
-.value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
-}
-
-/* ROW */
-.row{
-padding:14px;
-display:flex;
-justify-content:space-between;
-cursor:pointer;
-font-size:15px;
-}
-
-.row .check{
-display:none;
-color:#0a84ff;
-}
-
-.row.active .check{
-display:block;
-}
-
-.divider{
-height:1px;
-background:#e5e5ea;
-}
-
-/* BUTTON */
-button{
-width:100%;
-padding:14px;
-border:none;
-border-radius:14px;
-font-size:15px;
-cursor:pointer;
-margin-top:10px;
--webkit-appearance:none;
-}
-
-.pay{
-background:#34c759;
-color:white;
-font-weight:600;
-}
-</style>
-</head>
-
-<body>
-
-<div class="screen">
-
-<h2>iPhone IMEI Check</h2>
-<div class="sub">Only for Apple devices</div>
-
-<!-- IMEI -->
-<div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI">
-<button onclick="setIMEI()">Continue</button>
-</div>
-
-<!-- TYPE -->
-<div id="typeBlock"></div>
-
-<!-- EMAIL -->
-<div id="emailBlock"></div>
-
-<!-- PAY -->
-<div id="payBlock"></div>
-
-</div>
-
-<script>
-
-const API_URL = "https://imei-info.onrender.com";
-
-let imei = "";
-let type = "";
-
-/* IMEI */
-function setIMEI(){
-
-imei = document.getElementById("imeiInput").value.trim();
-
-if(!imei){
-  alert("Enter IMEI");
-  return;
-}
-
-document.getElementById("imeiBlock").innerHTML = `
-  <div class="value">
-    IMEI: <b>${imei}</b>
-  </div>
-`;
-
-showType();
-}
-
-/* TYPE (FIXED - NO DEFAULT ACTIVE) */
-function showType(){
-
-document.getElementById("typeBlock").innerHTML = `
-  <div class="block">
-
-    <div class="row" onclick="setType(this,'carrier')">
-      Carrier status <span class="check">✓</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row" onclick="setType(this,'findmy')">
-      Find My iPhone <span class="check">✓</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row" onclick="setType(this,'blacklist')">
-      Blacklist check <span class="check">✓</span>
-    </div>
-
-  </div>
-`;
-}
-
-/* SELECT TYPE */
-function setType(el,t){
-
-type = t;
-
-document.querySelectorAll(".row").forEach(e=>{
-  e.classList.remove("active");
+ } catch (err) {
+   console.log("WEBHOOK ERROR:", err.message);
+   res.status(400).send("Webhook error");
+ }
 });
 
-el.classList.add("active");
+/* =========================
+MIDDLEWARE
+========================= */
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-showEmail();
+/* =========================
+MONGODB
+========================= */
+mongoose.connect(process.env.MONGO_URL)
+ .then(() => console.log("MongoDB connected"))
+ .catch(err => console.log("MongoDB error:", err));
+
+/* =========================
+VALIDATION (IMEI / SN)
+========================= */
+function isValidDeviceId(deviceId){
+ const isIMEI = /^\d{15}$/.test(deviceId);
+ const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
+ return isIMEI || isSN;
 }
 
-/* EMAIL */
-function showEmail(){
-
-if(document.getElementById("emailBlock").innerHTML) return;
-
-document.getElementById("emailBlock").innerHTML = `
-  <div class="block">
-    <input id="email" placeholder="Enter email">
-  </div>
-`;
-
-showPay();
-}
-
-/* PAY */
-function showPay(){
-
-if(document.getElementById("payBlock").innerHTML) return;
-
-document.getElementById("payBlock").innerHTML = `
-  <button class="pay" onclick="payToCheck()">
-    Pay to Check $1.99
-  </button>
-`;
-}
-
-/* PAYMENT */
-async function payToCheck(){
-
-const email = document.getElementById("email").value.trim();
-
-if(!imei){
-  alert("Enter IMEI");
-  return;
-}
-
-if(!email){
-  alert("Enter email");
-  return;
-}
-
-if(!type){
-  alert("Select type");
-  return;
-}
-
-const res = await fetch(API_URL + "/create-payment", {
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body: JSON.stringify({
-    deviceId: imei,
-    email: email,
-    type: type
-  })
+/* =========================
+MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+ deviceId: { type: String, unique: true },
+ email: { type: String, default: "" },
+ type: { type: String, default: "carrier" },
+ status: { type: String, default: "pending" },
+ price: { type: Number, default: 1.99 },
+ paid: { type: Boolean, default: false },
+ time: { type: Date, default: Date.now }
 });
 
-const data = await res.json();
+const Check = mongoose.model("Check", CheckSchema);
 
-if(data.url){
-  window.location.href = data.url;
-} else {
-  alert("Payment error");
-}
-}
+/* =========================
+CREATE PAYMENT
+========================= */
+app.post("/create-payment", async (req, res) => {
+ try {
+   const { deviceId, email, type } = req.body;
 
-</script>
+   if (!deviceId || !isValidDeviceId(deviceId)) {
+     return res.status(400).json({ error: "Invalid IMEI / SN" });
+   }
 
-</body>
-</html>
+   await Check.updateOne(
+     { deviceId },
+     { $set: { email, type } },
+     { upsert: true }
+   );
+
+   const session = await stripe.checkout.sessions.create({
+     payment_method_types: ["card"],
+     mode: "payment",
+     line_items: [{
+       price_data: {
+         currency: "usd",
+         product_data: {
+           name: `IMEI/SN Check (${type || "carrier"})`
+         },
+         unit_amount: 199
+       },
+       quantity: 1
+     }],
+     metadata: { deviceId, email, type },
+     success_url: "https://imei-info.pages.dev",
+     cancel_url: "https://imei-info.pages.dev"
+   });
+
+   res.json({ url: session.url });
+
+ } catch (err) {
+   res.status(500).json({ error: err.message });
+ }
+});
+
+/* =========================
+CHECK RESULT
+========================= */
+app.post("/check", async (req, res) => {
+ try {
+   const { deviceId } = req.body;
+
+   if (!deviceId || !isValidDeviceId(deviceId)) {
+     return res.status(400).json({ status: "invalid_id" });
+   }
+
+   const payment = await Check.findOne({ deviceId });
+
+   if (!payment || payment.paid !== true) {
+     return res.status(403).json({ status: "payment_required" });
+   }
+
+   res.json(payment);
+
+ } catch (err) {
+   res.status(500).json({ status: "server_error" });
+ }
+});
+
+/* =========================
+DELETE
+========================= */
+app.get("/admin/delete/:id", async (req, res) => {
+ await Check.findByIdAndDelete(req.params.id);
+ res.redirect("/admin");
+});
+
+/* =========================
+ADMIN PANEL (PAID / UNPAID)
+========================= */
+app.get("/admin", async (req, res) => {
+
+ const data = await Check.find().sort({ time: -1 });
+
+ const paid = data.filter(i => i.paid === true);
+ const unpaid = data.filter(i => i.paid !== true);
+
+ res.send(`
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>Admin Panel</title>
+
+ <style>
+ body{margin:0;font-family:-apple-system;background:#f2f2f7;}
+ .container{max-width:520px;margin:auto;padding:16px;}
+ .card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
+ .copy{color:#0071e3;cursor:pointer;}
+ .delete{color:#ff3b30;text-decoration:none;}
+ h3{margin-top:20px;}
+ </style>
+ </head>
+
+ <body>
+
+ <div class="container">
+
+ <h2>📊 Admin Panel</h2>
+
+ <h3>✅ Paid (${paid.length})</h3>
+
+ ${paid.map(i => `
+ <div class="card">
+   <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
+   <div><b>Email:</b> ${i.email || "-"}</div>
+   <div><b>Type:</b> ${i.type}</div>
+   <div><b>Status:</b> PAID</div>
+   <a class="delete" href="/admin/delete/${i._id}">Delete</a>
+ </div>
+ `).join("")}
+
+ <h3>❌ Unpaid (${unpaid.length})</h3>
+
+ ${unpaid.map(i => `
+ <div class="card">
+   <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
+   <div><b>Email:</b> ${i.email || "-"}</div>
+   <div><b>Type:</b> ${i.type}</div>
+   <div><b>Status:</b> PENDING</div>
+   <a class="delete" href="/admin/delete/${i._id}">Delete</a>
+ </div>
+ `).join("")}
+
+ </div>
+
+ <script>
+ function copyText(t){
+   navigator.clipboard.writeText(t);
+   alert("Copied: " + t);
+ }
+ </script>
+
+ </body>
+ </html>
+ `);
+});
+
+/* =========================
+START
+========================= */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("RUNNING ON", PORT));
