@@ -7,51 +7,6 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
-WEBHOOK (RAW BODY FIRST)
-========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-try {
-  const event = JSON.parse(req.body.toString());
-
-  console.log("🔥 WEBHOOK:", event.type);
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    const deviceId = session.metadata?.deviceId;
-    const email = session.metadata?.email;
-    const type = session.metadata?.type;
-
-    if (deviceId) {
-      await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            email,
-            type,
-            paid: true,
-            status: "paid",
-            price: 1.99,
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
-
-      console.log("💰 PAYMENT SAVED:", deviceId);
-    }
-  }
-
-  res.json({ received: true });
-
-} catch (err) {
-  console.log("WEBHOOK ERROR:", err.message);
-  res.status(400).send("Webhook error");
-}
-});
-
-/* =========================
 MIDDLEWARE
 ========================= */
 app.use(cors());
@@ -63,132 +18,167 @@ app.use(cookieParser());
 MONGODB
 ========================= */
 mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log("MongoDB error:", err));
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
 
 /* =========================
-NORMALIZE FIX (IMPORTANT)
-========================= */
-function normalizeDeviceId(id) {
-  if (!id) return null;
-
-  const clean = id.trim().toUpperCase();
-
-  // IMEI 15 digits
-  if (/^\d{15}$/.test(clean)) {
-    return clean;
-  }
-
-  // SN 10–12 alphanumeric
-  if (/^[A-Z0-9]{10,12}$/.test(clean)) {
-    return clean;
-  }
-
-  return null;
-}
-
-/* =========================
-MODEL
+MODEL (⚠️ ДОЛЖЕН БЫТЬ ВЫШЕ WEBHOOK)
 ========================= */
 const CheckSchema = new mongoose.Schema({
-deviceId: { type: String, unique: true },
-email: { type: String, default: "" },
-type: { type: String, default: "carrier" },
-status: { type: String, default: "pending" },
-price: { type: Number, default: 1.99 },
-paid: { type: Boolean, default: false },
-time: { type: Date, default: Date.now }
+  deviceId: { type: String, unique: true },
+  email: { type: String, default: "" },
+  type: { type: String, default: "carrier" },
+  status: { type: String, default: "pending" },
+  price: { type: Number, default: 1.99 },
+  paid: { type: Boolean, default: false },
+  time: { type: Date, default: Date.now }
 });
 
 const Check = mongoose.model("Check", CheckSchema);
 
 /* =========================
+VALIDATION (IMEI / SN FIXED)
+========================= */
+function isValidDeviceId(deviceId) {
+  if (!deviceId) return false;
+
+  deviceId = deviceId.trim();
+
+  const isIMEI = /^\d{15}$/.test(deviceId);
+
+  // SN: 10-12 символов, буквы+цифры
+  const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
+
+  return isIMEI || isSN;
+}
+
+/* =========================
+WEBHOOK (FIXED ORDER)
+========================= */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const event = JSON.parse(req.body.toString());
+
+    console.log("🔥 WEBHOOK:", event.type);
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const deviceId = session.metadata?.deviceId;
+      const email = session.metadata?.email;
+      const type = session.metadata?.type;
+
+      if (deviceId) {
+        await Check.updateOne(
+          { deviceId },
+          {
+            $set: {
+              deviceId,
+              email,
+              type,
+              paid: true,
+              status: "paid",
+              price: 1.99,
+              time: new Date()
+            }
+          },
+          { upsert: true }
+        );
+
+        console.log("💰 PAYMENT SAVED:", deviceId);
+      }
+    }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err.message);
+    res.status(400).send("Webhook error");
+  }
+});
+
+/* =========================
 CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
-try {
-  const { deviceId, email, type } = req.body;
+  try {
+    const { deviceId, email, type } = req.body;
 
-  const finalId = normalizeDeviceId(deviceId);
+    if (!isValidDeviceId(deviceId)) {
+      return res.status(400).json({ error: "Invalid IMEI / SN (10–12 letters+numbers)" });
+    }
 
-  if (!finalId) {
-    return res.status(400).json({ error: "Invalid IMEI / SN" });
-  }
+    await Check.updateOne(
+      { deviceId },
+      { $set: { email, type } },
+      { upsert: true }
+    );
 
-  await Check.updateOne(
-    { deviceId: finalId },
-    { $set: { email, type } },
-    { upsert: true }
-  );
-
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: `IMEI/SN Check (${type || "carrier"})`
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `IMEI/SN Check (${type || "carrier"})`
+          },
+          unit_amount: 199
         },
-        unit_amount: 199
-      },
-      quantity: 1
-    }],
-    metadata: { deviceId: finalId, email, type },
-    success_url: "https://imei-info.pages.dev",
-    cancel_url: "https://imei-info.pages.dev"
-  });
+        quantity: 1
+      }],
+      metadata: { deviceId, email, type },
+      success_url: "https://imei-info.pages.dev",
+      cancel_url: "https://imei-info.pages.dev"
+    });
 
-  res.json({ url: session.url });
+    res.json({ url: session.url });
 
-} catch (err) {
-  res.status(500).json({ error: err.message });
-}
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* =========================
-CHECK RESULT (FIXED)
+CHECK
 ========================= */
 app.post("/check", async (req, res) => {
-try {
-  const finalId = normalizeDeviceId(req.body.deviceId);
+  try {
+    const { deviceId } = req.body;
 
-  if (!finalId) {
-    return res.status(400).json({ status: "invalid_id" });
+    if (!isValidDeviceId(deviceId)) {
+      return res.status(400).json({ status: "invalid_id" });
+    }
+
+    const payment = await Check.findOne({ deviceId });
+
+    if (!payment || payment.paid !== true) {
+      return res.status(403).json({ status: "payment_required" });
+    }
+
+    res.json(payment);
+
+  } catch (err) {
+    res.status(500).json({ status: "server_error" });
   }
-
-  const payment = await Check.findOne({ deviceId: finalId });
-
-  if (!payment || payment.paid !== true) {
-    return res.status(403).json({ status: "payment_required" });
-  }
-
-  res.json(payment);
-
-} catch (err) {
-  res.status(500).json({ status: "server_error" });
-}
 });
 
 /* =========================
-DELETE
+ADMIN DELETE
 ========================= */
 app.get("/admin/delete/:id", async (req, res) => {
-await Check.findByIdAndDelete(req.params.id);
-res.redirect("/admin");
+  await Check.findByIdAndDelete(req.params.id);
+  res.redirect("/admin");
 });
 
 /* =========================
-ADMIN PANEL
+ADMIN PANEL (FIXED EMAIL COPY)
 ========================= */
 app.get("/admin", async (req, res) => {
 
-const data = await Check.find().sort({ time: -1 });
+  const data = await Check.find().sort({ time: -1 });
 
-const paid = data.filter(i => i.paid === true);
-const unpaid = data.filter(i => i.paid !== true);
-
-res.send(`
+  res.send(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -202,7 +192,6 @@ body{margin:0;font-family:-apple-system;background:#f2f2f7;}
 .card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
 .copy{color:#0071e3;cursor:pointer;}
 .delete{color:#ff3b30;text-decoration:none;}
-h3{margin-top:20px;}
 </style>
 </head>
 
@@ -212,26 +201,12 @@ h3{margin-top:20px;}
 
 <h2>📊 Admin Panel</h2>
 
-<h3>✅ Paid (${paid.length})</h3>
-
-${paid.map(i => `
+${data.map(i => `
 <div class="card">
   <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-  <div><b>Email:</b> ${i.email || "-"}</div>
+  <div><b>Email:</b> <span class="copy" onclick="copyText('${(i.email || "").replace(/'/g,"") }')">${i.email || "-"}</span></div>
   <div><b>Type:</b> ${i.type}</div>
-  <div><b>Status:</b> PAID</div>
-  <a class="delete" href="/admin/delete/${i._id}">Delete</a>
-</div>
-`).join("")}
-
-<h3>❌ Unpaid (${unpaid.length})</h3>
-
-${unpaid.map(i => `
-<div class="card">
-  <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-  <div><b>Email:</b> ${i.email || "-"}</div>
-  <div><b>Type:</b> ${i.type}</div>
-  <div><b>Status:</b> PENDING</div>
+  <div><b>Status:</b> ${i.paid ? "PAID" : "PENDING"}</div>
   <a class="delete" href="/admin/delete/${i._id}">Delete</a>
 </div>
 `).join("")}
@@ -240,14 +215,14 @@ ${unpaid.map(i => `
 
 <script>
 function copyText(t){
-  navigator.clipboard.writeText(t);
+  navigator.clipboard.writeText(t || "");
   alert("Copied: " + t);
 }
 </script>
 
 </body>
 </html>
-`);
+  `);
 });
 
 /* =========================
