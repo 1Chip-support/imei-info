@@ -10,111 +10,125 @@
 
 <style>
 *{
- box-sizing:border-box;
+box-sizing:border-box;
 }
 
 body{
- margin:0;
- font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
- background:#f2f2f7;
- overflow-x:hidden;
+margin:0;
+font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+background:#f2f2f7;
+overflow-x:hidden;
 }
 
 .screen{
- padding:55px 16px calc(40px + env(safe-area-inset-bottom));
- max-width:420px;
- margin:0 auto;
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+max-width:420px;
+margin:0 auto;
 }
 
 h2{
- font-size:22px;
- font-weight:600;
- margin:0 0 5px 0;
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
 }
 
 .sub{
- font-size:13px;
- color:#8e8e93;
- margin-bottom:20px;
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
+
+/* LOGO */
+.logo{
+display:flex;
+justify-content:center;
+margin-bottom:15px;
+}
+
+.logo img{
+width:90px;
+height:90px;
+border-radius:20px;
+object-fit:cover;
 }
 
 .block{
- background:#fff;
- border-radius:14px;
- border:1px solid #e5e5ea;
- padding:12px;
- margin-bottom:12px;
+background:#fff;
+border-radius:14px;
+border:1px solid #e5e5ea;
+padding:12px;
+margin-bottom:12px;
 }
 
 input{
- width:100%;
- padding:14px;
- border:none;
- outline:none;
- font-size:15px;
+width:100%;
+padding:14px;
+border:none;
+outline:none;
+font-size:15px;
 }
 
 .value{
- padding:14px;
- font-size:15px;
- word-break:break-all;
+padding:14px;
+font-size:15px;
+word-break:break-all;
 }
 
 /* TYPE */
 .row{
- padding:14px;
- cursor:pointer;
- font-size:15px;
- border:1px solid #e5e5ea;
- border-radius:12px;
- margin-bottom:10px;
- background:#fff;
- transition:0.2s;
+padding:14px;
+cursor:pointer;
+font-size:15px;
+border:1px solid #e5e5ea;
+border-radius:12px;
+margin-bottom:10px;
+background:#fff;
+transition:0.2s;
 }
 
 .row.active{
- border:2px solid #0a84ff;
- background:#eef5ff;
+border:2px solid #0a84ff;
+background:#eef5ff;
 }
 
 /* BUTTON */
 button{
- width:100%;
- padding:14px;
- border:none;
- border-radius:14px;
- font-size:15px;
- cursor:pointer;
- margin-top:10px;
- -webkit-appearance:none;
- background:#0a84ff;
- color:#fff;
- font-weight:600;
+width:100%;
+padding:14px;
+border:none;
+border-radius:14px;
+font-size:15px;
+cursor:pointer;
+margin-top:10px;
+-webkit-appearance:none;
+background:#0a84ff;
+color:#fff;
+font-weight:600;
 }
 
 /* PAY */
 .pay{
- background:#34c759;
- color:white;
- font-weight:600;
+background:#34c759;
+color:white;
+font-weight:600;
 }
 
 /* ERROR */
 .error{
- background:#ff3b30;
- color:#fff;
- padding:12px;
- border-radius:12px;
- font-size:14px;
- margin-bottom:10px;
+background:#ff3b30;
+color:#fff;
+padding:12px;
+border-radius:12px;
+font-size:14px;
+margin-bottom:10px;
 }
 
 /* LOADING */
 .loading{
- text-align:center;
- padding:20px;
- font-size:14px;
- color:#8e8e93;
+text-align:center;
+padding:20px;
+font-size:14px;
+color:#8e8e93;
 }
 </style>
 </head>
@@ -123,13 +137,18 @@ button{
 
 <div class="screen">
 
+<!-- LOGO -->
+<div class="logo">
+  <img src="device-backend/images/logo.jpeg" alt="logo">
+</div>
+
 <h2>iPhone IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
 <!-- IMEI -->
 <div class="block" id="imeiBlock">
- <input id="imeiInput" placeholder="Enter IMEI">
- <button onclick="setIMEI()">Continue</button>
+<input id="imeiInput" placeholder="Enter IMEI">
+<button onclick="setIMEI()">Continue</button>
 </div>
 
 <div id="typeBlock"></div>
@@ -148,124 +167,122 @@ let type = "";
 /* IMEI CHECK */
 function setIMEI(){
 
- imei = document.getElementById("imeiInput").value.trim();
+imei = document.getElementById("imeiInput").value.trim();
 
- // validation
- if(!/^\d{15}$/.test(imei)){
-   document.getElementById("imeiBlock").innerHTML = `
-     <div class="error">
-       ❌ Invalid IMEI<br>
-       Must be exactly 15 digits
-     </div>
-     <input id="imeiInput" placeholder="Enter IMEI">
-     <button onclick="setIMEI()">Continue</button>
-   `;
-   return;
- }
+if(!/^\d{15}$/.test(imei)){
+  document.getElementById("imeiBlock").innerHTML = `
+    <div class="error">
+      ❌ Invalid IMEI<br>
+      Must be exactly 15 digits
+    </div>
+    <input id="imeiInput" placeholder="Enter IMEI">
+    <button onclick="setIMEI()">Continue</button>
+  `;
+  return;
+}
 
- // loading
- document.getElementById("imeiBlock").innerHTML = `
-   <div class="loading">Checking device...</div>
- `;
+document.getElementById("imeiBlock").innerHTML = `
+  <div class="loading">Checking device...</div>
+`;
 
- setTimeout(()=>{
-   document.getElementById("imeiBlock").innerHTML = `
-     <div class="value">
-       IMEI: <b>${imei}</b>
-     </div>
-   `;
-   showType();
- }, 1200);
+setTimeout(()=>{
+  document.getElementById("imeiBlock").innerHTML = `
+    <div class="value">
+      IMEI: <b>${imei}</b>
+    </div>
+  `;
+  showType();
+}, 1200);
 }
 
 /* TYPE */
 function showType(){
 
- document.getElementById("typeBlock").innerHTML = `
-   <div class="block">
+document.getElementById("typeBlock").innerHTML = `
+  <div class="block">
 
-     <div class="row" onclick="setType(this,'carrier')">
-       Carrier status
-     </div>
+    <div class="row" onclick="setType(this,'carrier')">
+      Carrier status
+    </div>
 
-     <div class="row" onclick="setType(this,'findmy')">
-       Find My iPhone
-     </div>
+    <div class="row" onclick="setType(this,'findmy')">
+      Find My iPhone
+    </div>
 
-     <div class="row" onclick="setType(this,'blacklist')">
-       Blacklist check
-     </div>
+    <div class="row" onclick="setType(this,'blacklist')">
+      Blacklist check
+    </div>
 
-   </div>
- `;
+  </div>
+`;
 }
 
 function setType(el,t){
 
- type = t;
+type = t;
 
- document.querySelectorAll(".row").forEach(e=>{
-   e.classList.remove("active");
- });
+document.querySelectorAll(".row").forEach(e=>{
+  e.classList.remove("active");
+});
 
- el.classList.add("active");
+el.classList.add("active");
 
- showEmail();
+showEmail();
 }
 
 /* EMAIL */
 function showEmail(){
 
- if(document.getElementById("emailBlock").innerHTML) return;
+if(document.getElementById("emailBlock").innerHTML) return;
 
- document.getElementById("emailBlock").innerHTML = `
-   <div class="block">
-     <input id="email" placeholder="Enter email">
-   </div>
- `;
+document.getElementById("emailBlock").innerHTML = `
+  <div class="block">
+    <input id="email" placeholder="Enter email">
+  </div>
+`;
 
- showPay();
+showPay();
 }
 
 /* PAY */
 function showPay(){
 
- if(document.getElementById("payBlock").innerHTML) return;
+if(document.getElementById("payBlock").innerHTML) return;
 
- document.getElementById("payBlock").innerHTML = `
-   <button class="pay" onclick="payToCheck()">
-     Pay to Check $1.99
-   </button>
- `;
+document.getElementById("payBlock").innerHTML = `
+  <button class="pay" onclick="payToCheck()">
+    Pay to Check $1.99
+  </button>
+`;
 }
 
 /* PAYMENT */
 async function payToCheck(){
 
- const email = document.getElementById("email").value.trim();
+const email = document.getElementById("email").value.trim();
 
- if(!imei || !type || !email){
-   alert("Fill all fields");
-   return;
- }
+if(!imei || !type || !email){
+  alert("Fill all fields");
+  return;
+}
 
- const res = await fetch(API_URL + "/create-payment", {
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body: JSON.stringify({
-     deviceId: imei,
-     email: email,
-     type: type
-   })
- });
+const res = await fetch(API_URL + "/create-payment", {
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body: JSON.stringify({
+    deviceId: imei,
+    email: email,
+    type: type
+  })
+});
 
- const data = await res.json();
+const data = await res.json();
 
- if(data.url){
-   window.location.href = data.url;
- } else {
-   alert("Payment error");
- }
+if(data.url){
+  window.location.href = data.url;
+} else {
+  alert("Payment error");
+}
 }
 
 </script>
