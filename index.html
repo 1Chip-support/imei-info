@@ -38,19 +38,6 @@ color:#8e8e93;
 margin-bottom:20px;
 }
 
-/* LOGO */
-.logo{
-text-align:center;
-margin-bottom:10px;
-}
-
-.logo img{
-width:90px;
-height:auto;
-border-radius:20px;
-}
-
-/* BLOCK */
 .block{
 background:#fff;
 border-radius:14px;
@@ -73,7 +60,6 @@ font-size:15px;
 word-break:break-all;
 }
 
-/* TYPE */
 .row{
 padding:14px;
 cursor:pointer;
@@ -90,7 +76,6 @@ border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
-/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -105,14 +90,12 @@ color:#fff;
 font-weight:600;
 }
 
-/* PAY */
 .pay{
 background:#34c759;
 color:white;
 font-weight:600;
 }
 
-/* ERROR */
 .error{
 background:#ff3b30;
 color:#fff;
@@ -122,7 +105,6 @@ font-size:14px;
 margin-bottom:10px;
 }
 
-/* LOADING */
 .loading{
 text-align:center;
 padding:20px;
@@ -135,11 +117,6 @@ color:#8e8e93;
 <body>
 
 <div class="screen">
-
-<!-- 🔥 LOGO -->
-<div class="logo">
-  <img src="logo.png" alt="1Chip">
-</div>
 
 <h2>iPhone IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
@@ -168,7 +145,6 @@ function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-// validation
 if(!/^\d{15}$/.test(imei)){
   document.getElementById("imeiBlock").innerHTML = `
     <div class="error">
@@ -181,7 +157,6 @@ if(!/^\d{15}$/.test(imei)){
   return;
 }
 
-// loading
 document.getElementById("imeiBlock").innerHTML = `
   <div class="loading">Checking device...</div>
 `;
@@ -228,11 +203,11 @@ document.querySelectorAll(".row").forEach(e=>{
 
 el.classList.add("active");
 
-showEmail();
+showEmailAndPay();
 }
 
-/* EMAIL */
-function showEmail(){
+/* EMAIL + PAY */
+function showEmailAndPay(){
 
 if(document.getElementById("emailBlock").innerHTML) return;
 
@@ -241,14 +216,6 @@ document.getElementById("emailBlock").innerHTML = `
     <input id="email" placeholder="Enter email">
   </div>
 `;
-
-showPay();
-}
-
-/* PAY */
-function showPay(){
-
-if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
   <button class="pay" onclick="payToCheck()">
@@ -262,8 +229,13 @@ async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
 
-if(!imei || !type || !email){
-  alert("Fill all fields");
+if(!imei || !type){
+  alert("Select type first");
+  return;
+}
+
+if(!email || !email.includes("@")){
+  alert("Enter valid email");
   return;
 }
 
