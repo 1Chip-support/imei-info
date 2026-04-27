@@ -7,48 +7,48 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
-WEBHOOK (RAW BODY MUST BE FIRST)
+WEBHOOK (RAW BODY FIRST)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
- try {
-   const event = JSON.parse(req.body.toString());
+try {
+  const event = JSON.parse(req.body.toString());
 
-   console.log("🔥 WEBHOOK:", event.type);
+  console.log("🔥 WEBHOOK:", event.type);
 
-   if (event.type === "checkout.session.completed") {
-     const session = event.data.object;
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
 
-     const deviceId = session.metadata?.deviceId;
-     const email = session.metadata?.email;
-     const type = session.metadata?.type;
+    const deviceId = session.metadata?.deviceId;
+    const email = session.metadata?.email;
+    const type = session.metadata?.type;
 
-     if (deviceId) {
-       await Check.updateOne(
-         { deviceId },
-         {
-           $set: {
-             deviceId,
-             email,
-             type,
-             paid: true,
-             status: "paid",
-             price: 1.99,
-             time: new Date()
-           }
-         },
-         { upsert: true }
-       );
+    if (deviceId) {
+      await Check.updateOne(
+        { deviceId },
+        {
+          $set: {
+            deviceId,
+            email,
+            type,
+            paid: true,
+            status: "paid",
+            price: 1.99,
+            time: new Date()
+          }
+        },
+        { upsert: true }
+      );
 
-       console.log("💰 PAYMENT SAVED:", deviceId);
-     }
-   }
+      console.log("💰 PAYMENT SAVED:", deviceId);
+    }
+  }
 
-   res.json({ received: true });
+  res.json({ received: true });
 
- } catch (err) {
-   console.log("WEBHOOK ERROR:", err.message);
-   res.status(400).send("Webhook error");
- }
+} catch (err) {
+  console.log("WEBHOOK ERROR:", err.message);
+  res.status(400).send("Webhook error");
+}
 });
 
 /* =========================
@@ -63,29 +63,41 @@ app.use(cookieParser());
 MONGODB
 ========================= */
 mongoose.connect(process.env.MONGO_URL)
- .then(() => console.log("MongoDB connected"))
- .catch(err => console.log("MongoDB error:", err));
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.log("MongoDB error:", err));
 
 /* =========================
-VALIDATION (IMEI / SN)
+NORMALIZE FIX (IMPORTANT)
 ========================= */
-function isValidDeviceId(deviceId){
- const isIMEI = /^\d{15}$/.test(deviceId);
- const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
- return isIMEI || isSN;
+function normalizeDeviceId(id) {
+  if (!id) return null;
+
+  const clean = id.trim().toUpperCase();
+
+  // IMEI 15 digits
+  if (/^\d{15}$/.test(clean)) {
+    return clean;
+  }
+
+  // SN 10–12 alphanumeric
+  if (/^[A-Z0-9]{10,12}$/.test(clean)) {
+    return clean;
+  }
+
+  return null;
 }
 
 /* =========================
 MODEL
 ========================= */
 const CheckSchema = new mongoose.Schema({
- deviceId: { type: String, unique: true },
- email: { type: String, default: "" },
- type: { type: String, default: "carrier" },
- status: { type: String, default: "pending" },
- price: { type: Number, default: 1.99 },
- paid: { type: Boolean, default: false },
- time: { type: Date, default: Date.now }
+deviceId: { type: String, unique: true },
+email: { type: String, default: "" },
+type: { type: String, default: "carrier" },
+status: { type: String, default: "pending" },
+price: { type: Number, default: 1.99 },
+paid: { type: Boolean, default: false },
+time: { type: Date, default: Date.now }
 });
 
 const Check = mongoose.model("Check", CheckSchema);
@@ -94,146 +106,148 @@ const Check = mongoose.model("Check", CheckSchema);
 CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
- try {
-   const { deviceId, email, type } = req.body;
+try {
+  const { deviceId, email, type } = req.body;
 
-   if (!deviceId || !isValidDeviceId(deviceId)) {
-     return res.status(400).json({ error: "Invalid IMEI / SN" });
-   }
+  const finalId = normalizeDeviceId(deviceId);
 
-   await Check.updateOne(
-     { deviceId },
-     { $set: { email, type } },
-     { upsert: true }
-   );
+  if (!finalId) {
+    return res.status(400).json({ error: "Invalid IMEI / SN" });
+  }
 
-   const session = await stripe.checkout.sessions.create({
-     payment_method_types: ["card"],
-     mode: "payment",
-     line_items: [{
-       price_data: {
-         currency: "usd",
-         product_data: {
-           name: `IMEI/SN Check (${type || "carrier"})`
-         },
-         unit_amount: 199
-       },
-       quantity: 1
-     }],
-     metadata: { deviceId, email, type },
-     success_url: "https://imei-info.pages.dev",
-     cancel_url: "https://imei-info.pages.dev"
-   });
+  await Check.updateOne(
+    { deviceId: finalId },
+    { $set: { email, type } },
+    { upsert: true }
+  );
 
-   res.json({ url: session.url });
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: `IMEI/SN Check (${type || "carrier"})`
+        },
+        unit_amount: 199
+      },
+      quantity: 1
+    }],
+    metadata: { deviceId: finalId, email, type },
+    success_url: "https://imei-info.pages.dev",
+    cancel_url: "https://imei-info.pages.dev"
+  });
 
- } catch (err) {
-   res.status(500).json({ error: err.message });
- }
+  res.json({ url: session.url });
+
+} catch (err) {
+  res.status(500).json({ error: err.message });
+}
 });
 
 /* =========================
-CHECK RESULT
+CHECK RESULT (FIXED)
 ========================= */
 app.post("/check", async (req, res) => {
- try {
-   const { deviceId } = req.body;
+try {
+  const finalId = normalizeDeviceId(req.body.deviceId);
 
-   if (!deviceId || !isValidDeviceId(deviceId)) {
-     return res.status(400).json({ status: "invalid_id" });
-   }
+  if (!finalId) {
+    return res.status(400).json({ status: "invalid_id" });
+  }
 
-   const payment = await Check.findOne({ deviceId });
+  const payment = await Check.findOne({ deviceId: finalId });
 
-   if (!payment || payment.paid !== true) {
-     return res.status(403).json({ status: "payment_required" });
-   }
+  if (!payment || payment.paid !== true) {
+    return res.status(403).json({ status: "payment_required" });
+  }
 
-   res.json(payment);
+  res.json(payment);
 
- } catch (err) {
-   res.status(500).json({ status: "server_error" });
- }
+} catch (err) {
+  res.status(500).json({ status: "server_error" });
+}
 });
 
 /* =========================
 DELETE
 ========================= */
 app.get("/admin/delete/:id", async (req, res) => {
- await Check.findByIdAndDelete(req.params.id);
- res.redirect("/admin");
+await Check.findByIdAndDelete(req.params.id);
+res.redirect("/admin");
 });
 
 /* =========================
-ADMIN PANEL (PAID / UNPAID)
+ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
 
- const data = await Check.find().sort({ time: -1 });
+const data = await Check.find().sort({ time: -1 });
 
- const paid = data.filter(i => i.paid === true);
- const unpaid = data.filter(i => i.paid !== true);
+const paid = data.filter(i => i.paid === true);
+const unpaid = data.filter(i => i.paid !== true);
 
- res.send(`
- <!DOCTYPE html>
- <html>
- <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1">
- <title>Admin Panel</title>
+res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel</title>
 
- <style>
- body{margin:0;font-family:-apple-system;background:#f2f2f7;}
- .container{max-width:520px;margin:auto;padding:16px;}
- .card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
- .copy{color:#0071e3;cursor:pointer;}
- .delete{color:#ff3b30;text-decoration:none;}
- h3{margin-top:20px;}
- </style>
- </head>
+<style>
+body{margin:0;font-family:-apple-system;background:#f2f2f7;}
+.container{max-width:520px;margin:auto;padding:16px;}
+.card{background:#fff;padding:12px;margin-bottom:10px;border-radius:14px;}
+.copy{color:#0071e3;cursor:pointer;}
+.delete{color:#ff3b30;text-decoration:none;}
+h3{margin-top:20px;}
+</style>
+</head>
 
- <body>
+<body>
 
- <div class="container">
+<div class="container">
 
- <h2>📊 Admin Panel</h2>
+<h2>📊 Admin Panel</h2>
 
- <h3>✅ Paid (${paid.length})</h3>
+<h3>✅ Paid (${paid.length})</h3>
 
- ${paid.map(i => `
- <div class="card">
-   <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-   <div><b>Email:</b> ${i.email || "-"}</div>
-   <div><b>Type:</b> ${i.type}</div>
-   <div><b>Status:</b> PAID</div>
-   <a class="delete" href="/admin/delete/${i._id}">Delete</a>
- </div>
- `).join("")}
+${paid.map(i => `
+<div class="card">
+  <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
+  <div><b>Email:</b> ${i.email || "-"}</div>
+  <div><b>Type:</b> ${i.type}</div>
+  <div><b>Status:</b> PAID</div>
+  <a class="delete" href="/admin/delete/${i._id}">Delete</a>
+</div>
+`).join("")}
 
- <h3>❌ Unpaid (${unpaid.length})</h3>
+<h3>❌ Unpaid (${unpaid.length})</h3>
 
- ${unpaid.map(i => `
- <div class="card">
-   <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
-   <div><b>Email:</b> ${i.email || "-"}</div>
-   <div><b>Type:</b> ${i.type}</div>
-   <div><b>Status:</b> PENDING</div>
-   <a class="delete" href="/admin/delete/${i._id}">Delete</a>
- </div>
- `).join("")}
+${unpaid.map(i => `
+<div class="card">
+  <div><b>ID:</b> <span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span></div>
+  <div><b>Email:</b> ${i.email || "-"}</div>
+  <div><b>Type:</b> ${i.type}</div>
+  <div><b>Status:</b> PENDING</div>
+  <a class="delete" href="/admin/delete/${i._id}">Delete</a>
+</div>
+`).join("")}
 
- </div>
+</div>
 
- <script>
- function copyText(t){
-   navigator.clipboard.writeText(t);
-   alert("Copied: " + t);
- }
- </script>
+<script>
+function copyText(t){
+  navigator.clipboard.writeText(t);
+  alert("Copied: " + t);
+}
+</script>
 
- </body>
- </html>
- `);
+</body>
+</html>
+`);
 });
 
 /* =========================
