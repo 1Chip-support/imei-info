@@ -63,30 +63,24 @@ input{
  word-break:break-all;
 }
 
-/* ROW */
+/* 🔵 TYPE ROW (APPLE STYLE) */
 .row{
  padding:14px;
- display:flex;
- justify-content:space-between;
  cursor:pointer;
  font-size:15px;
+ border:1px solid #e5e5ea;
+ border-radius:12px;
+ margin-bottom:10px;
+ background:#fff;
+ transition:0.2s;
 }
 
-.row .check{
- display:none;
- color:#0a84ff;
+.row.active{
+ border:2px solid #0a84ff;
+ background:#eef5ff;
 }
 
-.row.active .check{
- display:block;
-}
-
-.divider{
- height:1px;
- background:#e5e5ea;
-}
-
-/* DEFAULT BUTTON STYLE */
+/* BUTTON */
 button{
  width:100%;
  padding:14px;
@@ -96,16 +90,13 @@ button{
  cursor:pointer;
  margin-top:10px;
  -webkit-appearance:none;
-}
 
-/* 🔵 ONLY CONTINUE BUTTON */
-#imeiBlock button{
  background:#0a84ff;
  color:#fff;
  font-weight:600;
 }
 
-/* 🟢 PAY BUTTON (UNCHANGED) */
+/* PAY */
 .pay{
  background:#34c759;
  color:white;
@@ -171,19 +162,15 @@ function showType(){
    <div class="block">
 
      <div class="row" onclick="setType(this,'carrier')">
-       Carrier status <span class="check">✓</span>
+       Carrier status
      </div>
-
-     <div class="divider"></div>
 
      <div class="row" onclick="setType(this,'findmy')">
-       Find My iPhone <span class="check">✓</span>
+       Find My iPhone
      </div>
 
-     <div class="divider"></div>
-
      <div class="row" onclick="setType(this,'blacklist')">
-       Blacklist check <span class="check">✓</span>
+       Blacklist check
      </div>
 
    </div>
