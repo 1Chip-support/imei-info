@@ -8,7 +8,7 @@
 
 <title>IMEI Check</title>
 
-<!-- 🔥 SEO + GOOGLE + ICON -->
+<!-- SEO / ICON (FIXED PATH) -->
 <link rel="icon" type="image/jpeg" href="device-backend/images/logo.jpeg">
 <link rel="apple-touch-icon" href="device-backend/images/logo.jpeg">
 
@@ -18,7 +18,7 @@
 <meta property="og:type" content="website">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="1Chip IMEI">
+<meta name="apple-mobile-web-app-title" content="IMEI Check">
 <meta name="theme-color" content="#0a84ff">
 
 <style>
@@ -145,7 +145,7 @@ color:#8e8e93;
 
 <div class="screen">
 
-<!-- LOGO (correct path) -->
+<!-- LOGO (FIXED PATH) -->
 <div class="logo">
  <img src="device-backend/images/logo.jpeg" alt="logo">
 </div>
@@ -171,7 +171,6 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "";
 
-/* IMEI CHECK */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
@@ -202,7 +201,6 @@ setTimeout(()=>{
 }, 1200);
 }
 
-/* TYPE */
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
