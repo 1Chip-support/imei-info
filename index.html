@@ -6,17 +6,13 @@
 
 <meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
 
-<!-- SEO / GOOGLE -->
-<link rel="icon" type="image/jpeg" href="/device-backend/images/logo.jpeg">
+<!-- SEO (GOOGLE LOGO) -->
+<link rel="icon" type="image/jpeg" href="images/logo.jpeg">
 
-<meta property="og:title" content="1Chip IMEI Check">
-<meta property="og:description" content="Check iPhone IMEI status instantly">
-<meta property="og:image" content="https://imei-info.pages.dev/device-backend/images/logo.jpeg">
+<meta property="og:title" content="IMEI Check">
+<meta property="og:description" content="Only for Apple devices">
+<meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
 <meta property="og:type" content="website">
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="1Chip IMEI Check">
-<meta name="twitter:image" content="https://imei-info.pages.dev/device-backend/images/logo.jpeg">
 
 <title>IMEI Check</title>
 
@@ -50,7 +46,7 @@ color:#8e8e93;
 margin-bottom:20px;
 }
 
-/* LOGO */
+/* LOGO ADDED */
 .logo{
 display:flex;
 justify-content:center;
@@ -144,9 +140,9 @@ color:#8e8e93;
 
 <div class="screen">
 
-<!-- LOGO (FIXED PATH ONLY) -->
+<!-- LOGO FIXED -->
 <div class="logo">
- <img src="device-backend/images/logo.jpeg" alt="logo">
+  <img src="images/logo.jpeg" alt="logo">
 </div>
 
 <h2>iPhone IMEI Check</h2>
@@ -176,28 +172,28 @@ function setIMEI(){
 imei = document.getElementById("imeiInput").value.trim();
 
 if(!/^\d{15}$/.test(imei)){
- document.getElementById("imeiBlock").innerHTML = `
-   <div class="error">
-     ❌ Invalid IMEI<br>
-     Must be exactly 15 digits
-   </div>
-   <input id="imeiInput" placeholder="Enter IMEI">
-   <button onclick="setIMEI()">Continue</button>
- `;
- return;
+  document.getElementById("imeiBlock").innerHTML = `
+    <div class="error">
+      ❌ Invalid IMEI<br>
+      Must be exactly 15 digits
+    </div>
+    <input id="imeiInput">
+    <button onclick="setIMEI()">Continue</button>
+  `;
+  return;
 }
 
 document.getElementById("imeiBlock").innerHTML = `
- <div class="loading">Checking device...</div>
+  <div class="loading">Checking device...</div>
 `;
 
 setTimeout(()=>{
- document.getElementById("imeiBlock").innerHTML = `
-   <div class="value">
-     IMEI: <b>${imei}</b>
-   </div>
- `;
- showType();
+  document.getElementById("imeiBlock").innerHTML = `
+    <div class="value">
+      IMEI: <b>${imei}</b>
+    </div>
+  `;
+  showType();
 }, 1200);
 }
 
@@ -205,21 +201,21 @@ setTimeout(()=>{
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
- <div class="block">
+  <div class="block">
 
-   <div class="row" onclick="setType(this,'carrier')">
-     Carrier status
-   </div>
+    <div class="row" onclick="setType(this,'carrier')">
+      Carrier status
+    </div>
 
-   <div class="row" onclick="setType(this,'findmy')">
-     Find My iPhone
-   </div>
+    <div class="row" onclick="setType(this,'findmy')">
+      Find My iPhone
+    </div>
 
-   <div class="row" onclick="setType(this,'blacklist')">
-     Blacklist check
-   </div>
+    <div class="row" onclick="setType(this,'blacklist')">
+      Blacklist check
+    </div>
 
- </div>
+  </div>
 `;
 }
 
@@ -228,7 +224,7 @@ function setType(el,t){
 type = t;
 
 document.querySelectorAll(".row").forEach(e=>{
- e.classList.remove("active");
+  e.classList.remove("active");
 });
 
 el.classList.add("active");
@@ -241,9 +237,9 @@ function showEmail(){
 if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
- <div class="block">
-   <input id="email" placeholder="Enter email">
- </div>
+  <div class="block">
+    <input id="email" placeholder="Enter email">
+  </div>
 `;
 
 showPay();
@@ -254,9 +250,9 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
- <button class="pay" onclick="payToCheck()">
-   Pay to Check $1.99
- </button>
+  <button class="pay" onclick="payToCheck()">
+    Pay to Check $1.99
+  </button>
 `;
 }
 
@@ -265,26 +261,26 @@ async function payToCheck(){
 const email = document.getElementById("email").value.trim();
 
 if(!imei || !type || !email){
- alert("Fill all fields");
- return;
+  alert("Fill all fields");
+  return;
 }
 
 const res = await fetch(API_URL + "/create-payment", {
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body: JSON.stringify({
-   deviceId: imei,
-   email: email,
-   type: type
- })
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body: JSON.stringify({
+    deviceId: imei,
+    email: email,
+    type: type
+  })
 });
 
 const data = await res.json();
 
 if(data.url){
- window.location.href = data.url;
+  window.location.href = data.url;
 } else {
- alert("Payment error");
+  alert("Payment error");
 }
 }
 
