@@ -7,16 +7,16 @@
 <meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
 
 <!-- SEO / GOOGLE -->
-<link rel="icon" type="image/jpeg" href="/images/logo.jpeg">
+<link rel="icon" type="image/jpeg" href="/device-backend/images/logo.jpeg">
 
 <meta property="og:title" content="1Chip IMEI Check">
 <meta property="og:description" content="Check iPhone IMEI status instantly">
-<meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
+<meta property="og:image" content="https://imei-info.pages.dev/device-backend/images/logo.jpeg">
 <meta property="og:type" content="website">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="1Chip IMEI Check">
-<meta name="twitter:image" content="https://imei-info.pages.dev/images/logo.jpeg">
+<meta name="twitter:image" content="https://imei-info.pages.dev/device-backend/images/logo.jpeg">
 
 <title>IMEI Check</title>
 
@@ -87,7 +87,6 @@ font-size:15px;
 word-break:break-all;
 }
 
-/* TYPE */
 .row{
 padding:14px;
 cursor:pointer;
@@ -104,7 +103,6 @@ border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
-/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -113,20 +111,17 @@ border-radius:14px;
 font-size:15px;
 cursor:pointer;
 margin-top:10px;
--webkit-appearance:none;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
 }
 
-/* PAY */
 .pay{
 background:#34c759;
 color:white;
 font-weight:600;
 }
 
-/* ERROR */
 .error{
 background:#ff3b30;
 color:#fff;
@@ -136,7 +131,6 @@ font-size:14px;
 margin-bottom:10px;
 }
 
-/* LOADING */
 .loading{
 text-align:center;
 padding:20px;
@@ -150,9 +144,9 @@ color:#8e8e93;
 
 <div class="screen">
 
-<!-- LOGO -->
+<!-- LOGO (FIXED PATH ONLY) -->
 <div class="logo">
- <img src="images/logo.jpeg" alt="logo">
+ <img src="device-backend/images/logo.jpeg" alt="logo">
 </div>
 
 <h2>iPhone IMEI Check</h2>
@@ -242,7 +236,6 @@ el.classList.add("active");
 showEmail();
 }
 
-/* EMAIL */
 function showEmail(){
 
 if(document.getElementById("emailBlock").innerHTML) return;
@@ -256,7 +249,6 @@ document.getElementById("emailBlock").innerHTML = `
 showPay();
 }
 
-/* PAY */
 function showPay(){
 
 if(document.getElementById("payBlock").innerHTML) return;
@@ -268,7 +260,6 @@ document.getElementById("payBlock").innerHTML = `
 `;
 }
 
-/* PAYMENT */
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
