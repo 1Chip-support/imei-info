@@ -9,9 +9,7 @@
 <title>IMEI Check</title>
 
 <style>
-*{
-box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 body{
 margin:0;
@@ -139,7 +137,6 @@ color:#8e8e93;
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- INPUT -->
 <div class="block" id="imeiBlock">
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
@@ -159,24 +156,28 @@ let imei = "";
 let type = "";
 
 /* =========================
-IMEI / SN CHECK (FIXED)
+IMEI / SN VALIDATION
 ========================= */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-// IMEI = 15 digits only
+// IMEI = 15 digits
 const isIMEI = /^\d{15}$/.test(imei);
 
-// SN = letters + numbers, 10–12 chars (can start with number or letter)
-const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
+// SN = 10–12 chars + must contain letters AND numbers
+const isSN =
+  /^[A-Za-z0-9]{10,12}$/.test(imei) &&
+  /[A-Za-z]/.test(imei) &&
+  /\d/.test(imei);
 
+// ❌ INVALID
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
   <div class="error">
     ❌ Invalid IMEI / SN<br>
-    IMEI = 15 digits<br>
-    SN = 10–12 letters/numbers
+    IMEI = 15 digits only<br>
+    SN = 10–12 chars (must include letters + numbers)
   </div>
   <input id="imeiInput" placeholder="Enter IMEI/SN">
   <button onclick="setIMEI()">Continue</button>
@@ -184,6 +185,7 @@ document.getElementById("imeiBlock").innerHTML = `
 return;
 }
 
+// LOADING
 document.getElementById("imeiBlock").innerHTML = `
 <div class="loading">Checking device...</div>
 `;
