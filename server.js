@@ -25,11 +25,6 @@ MIDDLEWARE
 app.use(cors());
 app.use(cookieParser());
 
-app.post("/stripe-webhook", express.raw({ type: "application/json" }));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 /* =========================
 MONGODB
 ========================= */
@@ -57,6 +52,7 @@ VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
   if (!deviceId) return false;
+
   deviceId = deviceId.trim();
 
   const isIMEI = /^\d{15}$/.test(deviceId);
@@ -66,46 +62,56 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK
+WEBHOOK (FIXED — ONLY ONE!)
 ========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const event = JSON.parse(req.body.toString());
+app.post(
+  "/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const event = JSON.parse(req.body.toString());
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
 
-      const deviceId = session.metadata?.deviceId;
-      const email = session.metadata?.email;
-      const type = session.metadata?.type;
+        const deviceId = session.metadata?.deviceId;
+        const email = session.metadata?.email;
+        const type = session.metadata?.type;
 
-      if (deviceId) {
-        await Check.updateOne(
-          { deviceId },
-          {
-            $set: {
-              deviceId,
-              email,
-              type,
-              paid: true,
-              status: "paid",
-              time: new Date()
-            }
-          },
-          { upsert: true }
-        );
+        if (deviceId) {
+          await Check.updateOne(
+            { deviceId },
+            {
+              $set: {
+                deviceId,
+                email,
+                type,
+                paid: true,
+                status: "paid",
+                time: new Date()
+              }
+            },
+            { upsert: true }
+          );
 
-        console.log("💰 PAYMENT SAVED:", deviceId);
+          console.log("💰 PAYMENT SAVED:", deviceId);
+        }
       }
+
+      res.json({ received: true });
+
+    } catch (err) {
+      console.log("WEBHOOK ERROR:", err.message);
+      res.status(400).send("Webhook error");
     }
-
-    res.json({ received: true });
-
-  } catch (err) {
-    console.log("WEBHOOK ERROR:", err.message);
-    res.status(400).send("Webhook error");
   }
-});
+);
+
+/* =========================
+NORMAL BODY PARSER (AFTER WEBHOOK!)
+========================= */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /* =========================
 CREATE PAYMENT
@@ -150,58 +156,33 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-ADMIN API (JSON)
-========================= */
-app.get("/api/admin", async (req, res) => {
-  try {
-    const data = await Check.find().sort({ time: -1 });
-    res.json(data);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-/* =========================
-ADMIN PANEL (HTML)
+ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
   try {
     const data = await Check.find().sort({ time: -1 });
 
-    let rows = data.map(d => `
-      <tr>
-        <td>${d.deviceId}</td>
-        <td>${d.email}</td>
-        <td>${d.type}</td>
-        <td>${d.status}</td>
-        <td>${d.paid}</td>
-        <td>${d.time}</td>
-      </tr>
-    `).join("");
-
     res.send(`
       <html>
-      <head>
-        <title>Admin Panel</title>
-        <style>
-          body { font-family: Arial; background:#111; color:#fff; }
-          table { width:100%; border-collapse: collapse; }
-          td, th { border:1px solid #444; padding:8px; }
-          th { background:#222; }
-        </style>
-      </head>
-      <body>
+      <body style="font-family:Arial;background:#111;color:#fff;">
         <h2>Admin Panel</h2>
-        <table>
+        <table border="1" cellpadding="5">
           <tr>
-            <th>Device ID</th>
+            <th>Device</th>
             <th>Email</th>
             <th>Type</th>
             <th>Status</th>
             <th>Paid</th>
-            <th>Time</th>
           </tr>
-          ${rows}
+          ${data.map(d => `
+            <tr>
+              <td>${d.deviceId}</td>
+              <td>${d.email}</td>
+              <td>${d.type}</td>
+              <td>${d.status}</td>
+              <td>${d.paid}</td>
+            </tr>
+          `).join("")}
         </table>
       </body>
       </html>
