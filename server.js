@@ -15,21 +15,21 @@ if (!process.env.STRIPE_SECRET) {
 }
 
 /* =========================
-MIDDLEWARE (IMPORTANT ORDER)
+STRIPE INIT
+========================= */
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
+
+/* =========================
+MIDDLEWARE
 ========================= */
 app.use(cors());
 
-// webhook RAW MUST be ONLY here
+/* IMPORTANT: RAW ONLY FOR WEBHOOK */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-/* =========================
-STRIPE INIT (MUST AFTER dotenv)
-========================= */
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 /* =========================
 MONGODB
@@ -58,7 +58,6 @@ VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
   if (!deviceId) return false;
-
   deviceId = deviceId.trim();
 
   const isIMEI = /^\d{15}$/.test(deviceId);
@@ -68,7 +67,7 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK
+WEBHOOK (ONLY ONE ROUTE)
 ========================= */
 app.post("/stripe-webhook", async (req, res) => {
   try {
@@ -152,7 +151,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-START
+START SERVER
 ========================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUNNING ON", PORT));
