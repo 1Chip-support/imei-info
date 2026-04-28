@@ -11,25 +11,25 @@ const app = express();
 SAFETY CHECK
 ========================= */
 if (!process.env.STRIPE_SECRET) {
-  throw new Error("❌ STRIPE_SECRET is missing in .env");
+  throw new Error("❌ STRIPE_SECRET is missing");
 }
 
 /* =========================
-STRIPE INIT (FIXED)
-========================= */
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
-
-/* =========================
-MIDDLEWARE
+MIDDLEWARE (IMPORTANT ORDER)
 ========================= */
 app.use(cors());
 
-// ⚠️ webhook должен быть ДО express.json()
-app.use("/stripe-webhook", express.raw({ type: "application/json" }));
+// webhook RAW MUST be ONLY here
+app.post("/stripe-webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+/* =========================
+STRIPE INIT (MUST AFTER dotenv)
+========================= */
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 /* =========================
 MONGODB
@@ -117,7 +117,7 @@ app.post("/create-payment", async (req, res) => {
     const { deviceId, email, type } = req.body;
 
     if (!isValidDeviceId(deviceId)) {
-      return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
+      return res.status(400).json({ error: "Invalid ID" });
     }
 
     await Check.updateOne(
@@ -133,7 +133,7 @@ app.post("/create-payment", async (req, res) => {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `IMEI/SN Check (${type || "carrier"})`
+            name: `IMEI Check (${type || "carrier"})`
           },
           unit_amount: 199
         },
@@ -152,31 +152,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-CHECK
-========================= */
-app.post("/check", async (req, res) => {
-  try {
-    const { deviceId } = req.body;
-
-    if (!isValidDeviceId(deviceId)) {
-      return res.status(400).json({ status: "invalid_id" });
-    }
-
-    const payment = await Check.findOne({ deviceId });
-
-    if (!payment || payment.paid !== true) {
-      return res.status(403).json({ status: "payment_required" });
-    }
-
-    res.json(payment);
-
-  } catch (err) {
-    res.status(500).json({ status: "server_error" });
-  }
-});
-
-/* =========================
-START SERVER
+START
 ========================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUNNING ON", PORT));
