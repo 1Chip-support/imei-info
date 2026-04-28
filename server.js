@@ -25,7 +25,6 @@ MIDDLEWARE
 app.use(cors());
 app.use(cookieParser());
 
-/* ⚠️ RAW webhook MUST be BEFORE json */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
@@ -58,7 +57,6 @@ VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
   if (!deviceId) return false;
-
   deviceId = deviceId.trim();
 
   const isIMEI = /^\d{15}$/.test(deviceId);
@@ -68,7 +66,7 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK (FIXED)
+WEBHOOK
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
@@ -148,6 +146,69 @@ app.post("/create-payment", async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+ADMIN API (JSON)
+========================= */
+app.get("/api/admin", async (req, res) => {
+  try {
+    const data = await Check.find().sort({ time: -1 });
+    res.json(data);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+/* =========================
+ADMIN PANEL (HTML)
+========================= */
+app.get("/admin", async (req, res) => {
+  try {
+    const data = await Check.find().sort({ time: -1 });
+
+    let rows = data.map(d => `
+      <tr>
+        <td>${d.deviceId}</td>
+        <td>${d.email}</td>
+        <td>${d.type}</td>
+        <td>${d.status}</td>
+        <td>${d.paid}</td>
+        <td>${d.time}</td>
+      </tr>
+    `).join("");
+
+    res.send(`
+      <html>
+      <head>
+        <title>Admin Panel</title>
+        <style>
+          body { font-family: Arial; background:#111; color:#fff; }
+          table { width:100%; border-collapse: collapse; }
+          td, th { border:1px solid #444; padding:8px; }
+          th { background:#222; }
+        </style>
+      </head>
+      <body>
+        <h2>Admin Panel</h2>
+        <table>
+          <tr>
+            <th>Device ID</th>
+            <th>Email</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Paid</th>
+            <th>Time</th>
+          </tr>
+          ${rows}
+        </table>
+      </body>
+      </html>
+    `);
+
+  } catch (err) {
+    res.status(500).send(err.message);
   }
 });
 
