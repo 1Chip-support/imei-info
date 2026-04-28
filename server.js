@@ -52,7 +52,6 @@ VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
   if (!deviceId) return false;
-
   deviceId = deviceId.trim();
 
   const isIMEI = /^\d{15}$/.test(deviceId);
@@ -62,7 +61,7 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK (FIXED — ONLY ONE!)
+WEBHOOK (IMPORTANT FIX)
 ========================= */
 app.post(
   "/stripe-webhook",
@@ -108,7 +107,7 @@ app.post(
 );
 
 /* =========================
-NORMAL BODY PARSER (AFTER WEBHOOK!)
+BODY PARSER (AFTER WEBHOOK)
 ========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -156,33 +155,46 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-ADMIN PANEL
+ADMIN PANEL (HTML)
 ========================= */
 app.get("/admin", async (req, res) => {
   try {
     const data = await Check.find().sort({ time: -1 });
 
+    const rows = data.map(d => `
+      <tr>
+        <td>${d.deviceId}</td>
+        <td>${d.email}</td>
+        <td>${d.type}</td>
+        <td>${d.status}</td>
+        <td>${d.paid}</td>
+        <td>${d.time}</td>
+      </tr>
+    `).join("");
+
     res.send(`
       <html>
-      <body style="font-family:Arial;background:#111;color:#fff;">
+      <head>
+        <title>Admin Panel</title>
+        <style>
+          body { font-family: Arial; background:#111; color:#fff; }
+          table { width:100%; border-collapse: collapse; }
+          td, th { border:1px solid #444; padding:8px; }
+          th { background:#222; }
+        </style>
+      </head>
+      <body>
         <h2>Admin Panel</h2>
-        <table border="1" cellpadding="5">
+        <table>
           <tr>
-            <th>Device</th>
+            <th>Device ID</th>
             <th>Email</th>
             <th>Type</th>
             <th>Status</th>
             <th>Paid</th>
+            <th>Time</th>
           </tr>
-          ${data.map(d => `
-            <tr>
-              <td>${d.deviceId}</td>
-              <td>${d.email}</td>
-              <td>${d.type}</td>
-              <td>${d.status}</td>
-              <td>${d.paid}</td>
-            </tr>
-          `).join("")}
+          ${rows}
         </table>
       </body>
       </html>
@@ -194,10 +206,22 @@ app.get("/admin", async (req, res) => {
 });
 
 /* =========================
-START SERVER
+ADMIN API (JSON)
+========================= */
+app.get("/api/admin", async (req, res) => {
+  try {
+    const data = await Check.find().sort({ time: -1 });
+    res.json(data);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+/* =========================
+START SERVER (IMPORTANT FIX)
 ========================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("RUNNING ON", PORT);
+  console.log("🔥 SERVER LISTENING ON", PORT);
 });
