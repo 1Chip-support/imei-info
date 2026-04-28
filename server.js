@@ -1,4 +1,4 @@
-crequire("dotenv").config();
+require("dotenv").config();
 
 const mongoose = require("mongoose");
 const express = require("express");
@@ -8,29 +8,27 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 /* =========================
-SAFETY CHECK
-========================= */
-if (!process.env.STRIPE_SECRET) {
-  throw new Error("❌ STRIPE_SECRET is missing");
-}
-
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
-
-/* =========================
-MIDDLEWARE (ORDER FIXED)
+MIDDLEWARE
 ========================= */
 app.use(cors());
 app.use(cookieParser());
-
-/* ⚠️ RAW WEBHOOK MUST BE FIRST */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }));
-
-/* JSON AFTER RAW */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =========================
-MONGODB (SAFE START)
+OPTIONAL STRIPE (НЕ ЛОМАЕТ СЕРВЕР)
+========================= */
+let stripe = null;
+
+if (process.env.STRIPE_SECRET) {
+  stripe = require("stripe")(process.env.STRIPE_SECRET);
+  console.log("Stripe enabled");
+} else {
+  console.log("⚠️ Stripe disabled");
+}
+
+/* =========================
+MONGODB START
 ========================= */
 async function start() {
   try {
@@ -66,91 +64,7 @@ async function start() {
     }
 
     /* =========================
-    WEBHOOK
-    ========================= */
-    app.post("/stripe-webhook", async (req, res) => {
-      try {
-        const event = JSON.parse(req.body.toString());
-
-        if (event.type === "checkout.session.completed") {
-          const session = event.data.object;
-
-          const deviceId = session.metadata?.deviceId;
-          const email = session.metadata?.email;
-          const type = session.metadata?.type;
-
-          if (deviceId) {
-            await Check.updateOne(
-              { deviceId },
-              {
-                $set: {
-                  deviceId,
-                  email,
-                  type,
-                  paid: true,
-                  status: "paid",
-                  time: new Date()
-                }
-              },
-              { upsert: true }
-            );
-
-            console.log("💰 PAYMENT SAVED:", deviceId);
-          }
-        }
-
-        res.json({ received: true });
-
-      } catch (err) {
-        console.log("WEBHOOK ERROR:", err.message);
-        res.status(400).send("Webhook error");
-      }
-    });
-
-    /* =========================
-    CREATE PAYMENT
-    ========================= */
-    app.post("/create-payment", async (req, res) => {
-      try {
-        const { deviceId, email, type } = req.body;
-
-        if (!isValidDeviceId(deviceId)) {
-          return res.status(400).json({ error: "Invalid ID" });
-        }
-
-        await Check.updateOne(
-          { deviceId },
-          { $set: { email, type } },
-          { upsert: true }
-        );
-
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "payment",
-          line_items: [{
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `IMEI Check (${type || "carrier"})`
-              },
-              unit_amount: 199
-            },
-            quantity: 1
-          }],
-          metadata: { deviceId, email, type },
-          success_url: "https://imei-info.pages.dev",
-          cancel_url: "https://imei-info.pages.dev"
-        });
-
-        res.json({ url: session.url });
-
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
-
-    /* =========================
-    ADMIN PANEL
+    ADMIN (ПЕРВЫЙ В ПРИОРИТЕТЕ)
     ========================= */
     app.get("/admin", async (req, res) => {
       try {
@@ -201,16 +115,58 @@ async function start() {
     });
 
     /* =========================
+    CREATE PAYMENT (если Stripe есть)
+    ========================= */
+    app.post("/create-payment", async (req, res) => {
+      try {
+        if (!stripe) {
+          return res.status(500).json({ error: "Stripe not configured" });
+        }
+
+        const { deviceId, email, type } = req.body;
+
+        if (!isValidDeviceId(deviceId)) {
+          return res.status(400).json({ error: "Invalid ID" });
+        }
+
+        await Check.updateOne(
+          { deviceId },
+          { $set: { email, type } },
+          { upsert: true }
+        );
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: [{
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `IMEI Check (${type || "carrier"})`
+              },
+              unit_amount: 199
+            },
+            quantity: 1
+          }],
+          metadata: { deviceId, email, type },
+          success_url: "https://imei-info.pages.dev",
+          cancel_url: "https://imei-info.pages.dev"
+        });
+
+        res.json({ url: session.url });
+
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+
+    /* =========================
     START SERVER
     ========================= */
     const PORT = process.env.PORT || 3000;
 
-    const server = app.listen(PORT, "0.0.0.0", () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log("🔥 SERVER LISTENING ON", PORT);
-    });
-
-    server.on("error", (err) => {
-      console.log("💥 SERVER ERROR:", err);
     });
 
   } catch (err) {
