@@ -5,7 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
-// Stripe должен идти ПОСЛЕ dotenv
+// Stripe (OK)
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 const app = express();
@@ -14,48 +14,50 @@ const app = express();
 WEBHOOK (MUST BE FIRST)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-try {
-  const event = JSON.parse(req.body.toString());
+  try {
+    const event = JSON.parse(req.body.toString());
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
 
-    const deviceId = session.metadata?.deviceId;
-    const email = session.metadata?.email;
-    const type = session.metadata?.type;
+      const deviceId = session.metadata?.deviceId;
+      const email = session.metadata?.email;
+      const type = session.metadata?.type;
 
-    if (deviceId) {
-      await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            email,
-            type,
-            paid: true,
-            status: "paid",
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
+      if (deviceId) {
+        await Check.updateOne(
+          { deviceId },
+          {
+            $set: {
+              deviceId,
+              email,
+              type,
+              paid: true,
+              status: "paid",
+              time: new Date()
+            }
+          },
+          { upsert: true }
+        );
 
-      console.log("💰 PAYMENT SAVED:", deviceId);
+        console.log("💰 PAYMENT SAVED:", deviceId);
+      }
     }
+
+    res.json({ received: true });
+
+  } catch (err) {
+    console.log("WEBHOOK ERROR:", err.message);
+    res.status(400).send("Webhook error");
   }
-
-  res.json({ received: true });
-
-} catch (err) {
-  console.log("WEBHOOK ERROR:", err.message);
-  res.status(400).send("Webhook error");
-}
 });
 
 /* =========================
-MIDDLEWARE
+MIDDLEWARE (IMPORTANT ORDER FIX)
 ========================= */
 app.use(cors());
+
+// ⚠️ JSON должен быть ПОСЛЕ webhook
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -100,87 +102,66 @@ function isValidDeviceId(deviceId) {
 CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
-try {
-  const { deviceId, email, type } = req.body;
+  try {
+    const { deviceId, email, type } = req.body;
 
-  if (!isValidDeviceId(deviceId)) {
-    return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
-  }
+    if (!isValidDeviceId(deviceId)) {
+      return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
+    }
 
-  await Check.updateOne(
-    { deviceId },
-    { $set: { email, type } },
-    { upsert: true }
-  );
+    await Check.updateOne(
+      { deviceId },
+      { $set: { email, type } },
+      { upsert: true }
+    );
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: `IMEI/SN Check (${type || "carrier"})`
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `IMEI/SN Check (${type || "carrier"})`
+          },
+          unit_amount: 199
         },
-        unit_amount: 199
-      },
-      quantity: 1
-    }],
-    metadata: { deviceId, email, type },
-    success_url: "https://imei-info.pages.dev",
-    cancel_url: "https://imei-info.pages.dev"
-  });
+        quantity: 1
+      }],
+      metadata: { deviceId, email, type },
+      success_url: "https://imei-info.pages.dev",
+      cancel_url: "https://imei-info.pages.dev"
+    });
 
-  res.json({ url: session.url });
+    res.json({ url: session.url });
 
-} catch (err) {
-  res.status(500).json({ error: err.message });
-}
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* =========================
 CHECK
 ========================= */
 app.post("/check", async (req, res) => {
-try {
-  const { deviceId } = req.body;
+  try {
+    const { deviceId } = req.body;
 
-  if (!isValidDeviceId(deviceId)) {
-    return res.status(400).json({ status: "invalid_id" });
+    if (!isValidDeviceId(deviceId)) {
+      return res.status(400).json({ status: "invalid_id" });
+    }
+
+    const payment = await Check.findOne({ deviceId });
+
+    if (!payment || payment.paid !== true) {
+      return res.status(403).json({ status: "payment_required" });
+    }
+
+    res.json(payment);
+
+  } catch (err) {
+    res.status(500).json({ status: "server_error" });
   }
-
-  const payment = await Check.findOne({ deviceId });
-
-  if (!payment || payment.paid !== true) {
-    return res.status(403).json({ status: "payment_required" });
-  }
-
-  res.json(payment);
-
-} catch (err) {
-  res.status(500).json({ status: "server_error" });
-}
-});
-
-/* =========================
-DELETE
-========================= */
-app.get("/admin/delete/:id", async (req, res) => {
-  await Check.findByIdAndDelete(req.params.id);
-  res.redirect("/admin");
-});
-
-/* =========================
-ADMIN PANEL
-========================= */
-app.get("/admin", async (req, res) => {
-
-const data = await Check.find().sort({ time: -1 });
-
-const paid = data.filter(i => i.paid === true);
-const unpaid = data.filter(i => i.paid !== true);
-
-res.send(`HTML OMITTED FOR BREVITY`);
 });
 
 /* =========================
