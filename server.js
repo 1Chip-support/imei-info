@@ -5,10 +5,60 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
-// Stripe (OK)
+const app = express();
+
+/* =========================
+SAFETY CHECK
+========================= */
+if (!process.env.STRIPE_SECRET) {
+  throw new Error("❌ STRIPE_SECRET is missing in .env");
+}
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
-const app = express();
+/* =========================
+MIDDLEWARE
+========================= */
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+/* =========================
+MONGODB
+========================= */
+mongoose.connect(process.env.MONGO_URL)
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.log("MongoDB error:", err));
+
+/* =========================
+MODEL
+========================= */
+const CheckSchema = new mongoose.Schema({
+  deviceId: { type: String, unique: true },
+  email: { type: String, default: "" },
+  type: { type: String, default: "carrier" },
+  status: { type: String, default: "pending" },
+  price: { type: Number, default: 1.99 },
+  paid: { type: Boolean, default: false },
+  time: { type: Date, default: Date.now }
+});
+
+const Check = mongoose.model("Check", CheckSchema);
+
+/* =========================
+VALIDATION
+========================= */
+function isValidDeviceId(deviceId) {
+  if (!deviceId) return false;
+
+  deviceId = deviceId.trim();
+
+  const isIMEI = /^\d{15}$/.test(deviceId);
+  const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
+
+  return isIMEI || isSN;
+}
 
 /* =========================
 WEBHOOK (MUST BE FIRST)
@@ -51,52 +101,6 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
     res.status(400).send("Webhook error");
   }
 });
-
-/* =========================
-MIDDLEWARE (IMPORTANT ORDER FIX)
-========================= */
-app.use(cors());
-
-// ⚠️ JSON должен быть ПОСЛЕ webhook
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-/* =========================
-MONGODB
-========================= */
-mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log("MongoDB error:", err));
-
-/* =========================
-MODEL
-========================= */
-const CheckSchema = new mongoose.Schema({
-  deviceId: { type: String, unique: true },
-  email: { type: String, default: "" },
-  type: { type: String, default: "carrier" },
-  status: { type: String, default: "pending" },
-  price: { type: Number, default: 1.99 },
-  paid: { type: Boolean, default: false },
-  time: { type: Date, default: Date.now }
-});
-
-const Check = mongoose.model("Check", CheckSchema);
-
-/* =========================
-VALIDATION
-========================= */
-function isValidDeviceId(deviceId) {
-  if (!deviceId) return false;
-
-  deviceId = deviceId.trim();
-
-  const isIMEI = /^\d{15}$/.test(deviceId);
-  const isSN = /^[A-Za-z0-9]{10,12}$/.test(deviceId);
-
-  return isIMEI || isSN;
-}
 
 /* =========================
 CREATE PAYMENT
