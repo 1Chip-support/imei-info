@@ -1,3 +1,4 @@
+console.log("🔥 FILE STARTED");
 require('dotenv').config();
 
 const mongoose = require("mongoose");
