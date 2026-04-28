@@ -15,17 +15,22 @@ if (!process.env.STRIPE_SECRET) {
 }
 
 /* =========================
-STRIPE INIT
+STRIPE INIT (IMPORTANT FIX)
 ========================= */
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const stripeKey = process.env.STRIPE_SECRET;
+const stripe = require("stripe")(stripeKey);
 
 /* =========================
 MIDDLEWARE
 ========================= */
 app.use(cors());
+app.use(cookieParser());
+
+/* ⚠️ RAW webhook MUST be BEFORE json */
+app.post("/stripe-webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 
 /* =========================
 MONGODB
@@ -64,9 +69,9 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK (FIXED)
+WEBHOOK (FIXED SAFE VERSION)
 ========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+app.post("/stripe-webhook", async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
 
