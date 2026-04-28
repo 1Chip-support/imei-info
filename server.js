@@ -14,12 +14,19 @@ if (!process.env.STRIPE_SECRET) {
   throw new Error("❌ STRIPE_SECRET is missing in .env");
 }
 
+/* =========================
+STRIPE INIT (FIXED)
+========================= */
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 /* =========================
 MIDDLEWARE
 ========================= */
 app.use(cors());
+
+// ⚠️ webhook должен быть ДО express.json()
+app.use("/stripe-webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -28,8 +35,8 @@ app.use(cookieParser());
 MONGODB
 ========================= */
 mongoose.connect(process.env.MONGO_URL)
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log("MongoDB error:", err));
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log("MongoDB error:", err));
 
 /* =========================
 MODEL
@@ -61,9 +68,9 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK (MUST BE FIRST)
+WEBHOOK
 ========================= */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+app.post("/stripe-webhook", async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
 
