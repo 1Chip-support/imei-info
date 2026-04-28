@@ -68,9 +68,9 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK
+WEBHOOK (FIXED)
 ========================= */
-app.post("/stripe-webhook", async (req, res) => {
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
 
@@ -152,7 +152,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 /* =========================
-START SERVER (FIXED)
+START SERVER
 ========================= */
 const PORT = process.env.PORT || 3000;
 
