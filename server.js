@@ -23,10 +23,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 MIDDLEWARE
 ========================= */
 app.use(cors());
-
-/* IMPORTANT: RAW ONLY FOR WEBHOOK */
-app.post("/stripe-webhook", express.raw({ type: "application/json" }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -58,6 +54,7 @@ VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
   if (!deviceId) return false;
+
   deviceId = deviceId.trim();
 
   const isIMEI = /^\d{15}$/.test(deviceId);
@@ -67,9 +64,9 @@ function isValidDeviceId(deviceId) {
 }
 
 /* =========================
-WEBHOOK (ONLY ONE ROUTE)
+WEBHOOK (FIXED)
 ========================= */
-app.post("/stripe-webhook", async (req, res) => {
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const event = JSON.parse(req.body.toString());
 
