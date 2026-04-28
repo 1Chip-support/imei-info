@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
@@ -11,40 +13,40 @@ WEBHOOK (MUST BE FIRST)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
 try {
-  const event = JSON.parse(req.body.toString());
+ const event = JSON.parse(req.body.toString());
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
+ if (event.type === "checkout.session.completed") {
+   const session = event.data.object;
 
-    const deviceId = session.metadata?.deviceId;
-    const email = session.metadata?.email;
-    const type = session.metadata?.type;
+   const deviceId = session.metadata?.deviceId;
+   const email = session.metadata?.email;
+   const type = session.metadata?.type;
 
-    if (deviceId) {
-      await Check.updateOne(
-        { deviceId },
-        {
-          $set: {
-            deviceId,
-            email,
-            type,
-            paid: true,
-            status: "paid",
-            time: new Date()
-          }
-        },
-        { upsert: true }
-      );
+   if (deviceId) {
+     await Check.updateOne(
+       { deviceId },
+       {
+         $set: {
+           deviceId,
+           email,
+           type,
+           paid: true,
+           status: "paid",
+           time: new Date()
+         }
+       },
+       { upsert: true }
+     );
 
-      console.log("💰 PAYMENT SAVED:", deviceId);
-    }
-  }
+     console.log("💰 PAYMENT SAVED:", deviceId);
+   }
+ }
 
-  res.json({ received: true });
+ res.json({ received: true });
 
 } catch (err) {
-  console.log("WEBHOOK ERROR:", err.message);
-  res.status(400).send("Webhook error");
+ console.log("WEBHOOK ERROR:", err.message);
+ res.status(400).send("Webhook error");
 }
 });
 
@@ -97,40 +99,40 @@ CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
 try {
-  const { deviceId, email, type } = req.body;
+ const { deviceId, email, type } = req.body;
 
-  if (!isValidDeviceId(deviceId)) {
-    return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
-  }
+ if (!isValidDeviceId(deviceId)) {
+   return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
+ }
 
-  await Check.updateOne(
-    { deviceId },
-    { $set: { email, type } },
-    { upsert: true }
-  );
+ await Check.updateOne(
+   { deviceId },
+   { $set: { email, type } },
+   { upsert: true }
+ );
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: `IMEI/SN Check (${type || "carrier"})`
-        },
-        unit_amount: 199
-      },
-      quantity: 1
-    }],
-    metadata: { deviceId, email, type },
-    success_url: "https://imei-info.pages.dev",
-    cancel_url: "https://imei-info.pages.dev"
-  });
+ const session = await stripe.checkout.sessions.create({
+   payment_method_types: ["card"],
+   mode: "payment",
+   line_items: [{
+     price_data: {
+       currency: "usd",
+       product_data: {
+         name: `IMEI/SN Check (${type || "carrier"})`
+       },
+       unit_amount: 199
+     },
+     quantity: 1
+   }],
+   metadata: { deviceId, email, type },
+   success_url: "https://imei-info.pages.dev",
+   cancel_url: "https://imei-info.pages.dev"
+ });
 
-  res.json({ url: session.url });
+ res.json({ url: session.url });
 
 } catch (err) {
-  res.status(500).json({ error: err.message });
+ res.status(500).json({ error: err.message });
 }
 });
 
@@ -139,22 +141,22 @@ CHECK
 ========================= */
 app.post("/check", async (req, res) => {
 try {
-  const { deviceId } = req.body;
+ const { deviceId } = req.body;
 
-  if (!isValidDeviceId(deviceId)) {
-    return res.status(400).json({ status: "invalid_id" });
-  }
+ if (!isValidDeviceId(deviceId)) {
+   return res.status(400).json({ status: "invalid_id" });
+ }
 
-  const payment = await Check.findOne({ deviceId });
+ const payment = await Check.findOne({ deviceId });
 
-  if (!payment || payment.paid !== true) {
-    return res.status(403).json({ status: "payment_required" });
-  }
+ if (!payment || payment.paid !== true) {
+   return res.status(403).json({ status: "payment_required" });
+ }
 
-  res.json(payment);
+ res.json(payment);
 
 } catch (err) {
-  res.status(500).json({ status: "server_error" });
+ res.status(500).json({ status: "server_error" });
 }
 });
 
