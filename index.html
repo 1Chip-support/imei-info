@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
 <meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
-
 <title>IMEI Check</title>
 
 <style>
@@ -103,6 +101,10 @@ background:#34c759;
 color:white;
 font-weight:600;
 }
+.pay:disabled {
+background: #a8d5b7;
+cursor: not-allowed;
+}
 </style>
 </head>
 
@@ -115,8 +117,8 @@ font-weight:600;
 
 <!-- IMEI -->
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI">
-<button onclick="setIMEI()">Continue</button>
+  <input id="imeiInput" placeholder="Enter IMEI">
+  <button onclick="setIMEI()">Continue</button>
 </div>
 
 <!-- TYPE -->
@@ -132,7 +134,8 @@ font-weight:600;
 
 <script>
 
-const API_URL = "https://imei-info.onrender.com";
+// Обновленный URL сервера
+const API_URL = "https://imei-info.pages.dev";
 
 let imei = "";
 let type = "";
@@ -156,7 +159,7 @@ document.getElementById("imeiBlock").innerHTML = `
 showType();
 }
 
-/* TYPE (FIXED - NO DEFAULT ACTIVE) */
+/* TYPE */
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
@@ -216,7 +219,7 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
- <button class="pay" onclick="payToCheck()">
+ <button class="pay" id="payButton" onclick="payToCheck()">
    Pay to Check $1.99
  </button>
 `;
@@ -226,6 +229,7 @@ document.getElementById("payBlock").innerHTML = `
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
+const payButton = document.getElementById("payButton");
 
 if(!imei){
  alert("Enter IMEI");
@@ -242,22 +246,43 @@ if(!type){
  return;
 }
 
-const res = await fetch(API_URL + "/create-payment", {
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body: JSON.stringify({
-   deviceId: imei,
-   email: email,
-   type: type
- })
-});
+// Блокируем кнопку, чтобы избежать двойного нажатия
+payButton.disabled = true;
+payButton.innerText = "Loading...";
 
-const data = await res.json();
+try {
+  const res = await fetch(API_URL + "/create-payment", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      deviceId: imei,
+      email: email,
+      type: type
+    })
+  });
 
-if(data.url){
- window.location.href = data.url;
-} else {
- alert("Payment error");
+  if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Server Error: ${res.status} - ${errorText}`);
+  }
+
+  const data = await res.json();
+
+  if(data.url){
+    window.location.href = data.url;
+  } else {
+    alert("Payment error: No URL in response. Check server logs.");
+    console.log(data);
+    // Разблокируем кнопку, если что-то пошло не так
+    payButton.disabled = false;
+    payButton.innerText = "Pay to Check $1.99";
+  }
+} catch (err) {
+  alert("Connection error: " + err.message);
+  console.error(err);
+  // Разблокируем кнопку при ошибке соединения
+  payButton.disabled = false;
+  payButton.innerText = "Pay to Check $1.99";
 }
 }
 
