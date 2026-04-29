@@ -11,7 +11,7 @@ const app = express();
 SAFETY CHECK
 ========================= */
 if (!process.env.STRIPE_SECRET) {
-  throw new Error("❌ STRIPE_SECRET is missing in .env file");
+ throw new Error("❌ STRIPE_SECRET is missing in .env file");
 }
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
@@ -19,177 +19,209 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 /* =========================
 MIDDLEWARE
 ========================= */
-app.use(cors({
-  origin: ["http://localhost:3000", "https://imei-info.pages.dev"],
-  credentials: true
-}));
-app.use(express.json());
+app.use(cors());
 app.use(cookieParser());
 
 /* =========================
-MONGODB CONNECTION
+WEBHOOK ROUTE (RAW JSON)
 ========================= */
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("MongoDB connection error:", err));
+app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+ const sig = req.headers['stripe-signature'];
 
-/* =========================
-SCHEMA & MODEL
-========================= */
-const imeiSchema = new mongoose.Schema({
-  imei: { type: String, required: true, unique: true },
-  status: { type: String, default: "unpaid" }, // 'paid' or 'unpaid'
-  createdAt: { type: Date, default: Date.now }
-});
+ try {
+   // Если ты тестируешь локально или без подписи, парсим JSON напрямую
+   // В продакшене лучше использовать stripe.webhooks.constructEvent
+   const event = JSON.parse(req.body.toString());
 
-const IMEI = mongoose.model("IMEI", imeiSchema);
+   if (event.type === "checkout.session.completed") {
+     const session = event.data.object;
 
-/* =========================
-ROUTES
-========================= */
+     const deviceId = session.metadata?.deviceId;
+     const email = session.metadata?.email;
+     const type = session.metadata?.type;
 
-// 1. Главная страница (твой сайт)
-app.get("/", (req, res) => {
-  res.send("IMEI Info API is running...");
-});
+     if (deviceId) {
+       await IMEI.updateOne(
+         { imei: deviceId },
+         {
+           $set: {
+             imei: deviceId,
+             email,
+             type,
+             paid: true,
+             status: "paid",
+             time: new Date()
+           }
+         },
+         { upsert: true }
+       );
 
-// 2. Создать платеж (Stripe)
-app.post("/create-checkout-session", async (req, res) => {
-  const { imei } = req.body;
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: { name: `IMEI Check: ${imei}` },
-          unit_amount: 1000, // $10.00
-        },
-        quantity: 1,
-      }],
-      mode: "payment",
-      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}&imei=${imei}`,
-      cancel_url: `${process.env.CLIENT_URL}/cancel`,
-    });
-    res.json({ url: session.url });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+       console.log("💰 PAYMENT SAVED:", deviceId);
+     }
+   }
 
-// 3. Подтвердить оплату
-app.get("/success", async (req, res) => {
-  const { session_id, imei } = req.query;
-  try {
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-    if (session.payment_status === "paid") {
-      await IMEI.findOneAndUpdate(
-        { imei: imei },
-        { status: "paid" },
-        { upsert: true, new: true }
-      );
-      res.redirect(`${process.env.CLIENT_URL}/admin`);
-    } else {
-      res.status(400).send("Payment not completed");
-    }
-  } catch (e) {
-    res.status(500).send(e.message);
-  }
-});
+   res.json({ received: true });
 
-// 4. Админ панель (с новыми вкладками и стилями!)
-app.get("/admin", async (req, res) => {
-  const allIMEIs = await IMEI.find().sort({ createdAt: -1 });
-
-  const html = `
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-      <meta charset="UTF-8">
-      <title>Админка IMEI</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f6f8; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-
-        /* Стили для вкладок */
-        .tabs { display: flex; justify-content: center; margin-bottom: 20px; gap: 10px; }
-        .tab-btn { padding: 10px 20px; border: none; background: #e0e0e0; cursor: pointer; border-radius: 5px; font-size: 16px; transition: 0.3s; }
-        .tab-btn.active { background: #007bff; color: white; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f8f9fa; }
-
-        /* Цвета статусов */
-        .paid-row { background-color: #d4edda; color: #155724; }
-        .unpaid-row { background-color: #fff3cd; color: #856404; }
-
-        .hidden { display: none; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>📋 Список IMEI</h1>
-
-        <div class="tabs">
-          <button class="tab-btn active" onclick="filterTable('all')">Все</button>
-          <button class="tab-btn" onclick="filterTable('unpaid')">⏳ Неоплаченные</button>
-          <button class="tab-btn" onclick="filterTable('paid')">✅ Оплаченные</button>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>IMEI</th>
-              <th>Статус</th>
-              <th>Дата</th>
-            </tr>
-          </thead>
-          <tbody id="imeiTable">
-            ${allIMEIs.map(item => `
-              <tr class="${item.status === 'paid' ? 'paid-row' : 'unpaid-row'}" data-status="${item.status}">
-                <td>${item.imei}</td>
-                <td>${item.status === 'paid' ? 'Оплачено' : 'Не оплачено'}</td>
-                <td>${new Date(item.createdAt).toLocaleDateString()}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-
-      <script>
-        function filterTable(status) {
-          const rows = document.querySelectorAll('#imeiTable tr');
-          const buttons = document.querySelectorAll('.tab-btn');
-
-          // Обновляем активную кнопку
-          buttons.forEach(btn => btn.classList.remove('active'));
-          event.target.classList.add('active');
-
-          rows.forEach(row => {
-            if (status === 'all') {
-              row.classList.remove('hidden');
-            } else {
-              if (row.getAttribute('data-status') === status) {
-                row.classList.remove('hidden');
-              } else {
-                row.classList.add('hidden');
-              }
-            }
-          });
-        }
-      </script>
-    </body>
-    </html>
-  `;
-  res.send(html);
+ } catch (err) {
+   console.log("WEBHOOK ERROR:", err.message);
+   res.status(400).send("Webhook error");
+ }
 });
 
 /* =========================
-START SERVER
+JSON MIDDLEWARE (FOR OTHER ROUTES)
 ========================= */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🔥 Server listening on port ${PORT}`);
-});
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* =========================
+MONGODB & SERVER START
+========================= */
+let IMEI; // Объявляем модель глобально для роутов
+
+async function start() {
+ try {
+   console.log("🔥 STARTING SERVER...");
+
+   // Исправлено: ищем и MONGO_URI, и MONGODB_URI
+   await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI);
+   console.log("MongoDB connected");
+
+   /* =========================
+   MODEL
+   ========================= */
+   const CheckSchema = new mongoose.Schema({
+     imei: { type: String, unique: true },
+     email: { type: String, default: "" },
+     type: { type: String, default: "carrier" },
+     status: { type: String, default: "pending" },
+     price: { type: Number, default: 1.99 },
+     paid: { type: Boolean, default: false },
+     time: { type: Date, default: Date.now }
+   });
+
+   IMEI = mongoose.model("IMEI", CheckSchema);
+
+   /* =========================
+   VALIDATION
+   ========================= */
+   function isValidDeviceId(deviceId) {
+     if (!deviceId) return false;
+     deviceId = deviceId.trim();
+
+     return /^\d{15}$/.test(deviceId) ||
+            /^[A-Za-z0-9]{10,12}$/.test(deviceId);
+   }
+
+   /* =========================
+   CREATE PAYMENT
+   ========================= */
+   app.post("/create-payment", async (req, res) => {
+     try {
+       const { deviceId, email, type } = req.body;
+
+       if (!isValidDeviceId(deviceId)) {
+         return res.status(400).json({ error: "Invalid ID" });
+       }
+
+       await IMEI.updateOne(
+         { imei: deviceId },
+         { $set: { email, type } },
+         { upsert: true }
+       );
+
+       const session = await stripe.checkout.sessions.create({
+         payment_method_types: ["card"],
+         mode: "payment",
+         line_items: [{
+           price_data: {
+             currency: "usd",
+             product_data: {
+               name: `IMEI Check (${type || "carrier"})`
+             },
+             unit_amount: 199
+           },
+           quantity: 1
+         }],
+         metadata: { deviceId, email, type },
+         success_url: "https://imei-info.pages.dev",
+         cancel_url: "https://imei-info.pages.dev"
+       });
+
+       res.json({ url: session.url });
+
+     } catch (err) {
+       res.status(500).json({ error: err.message });
+     }
+   });
+
+   /* =========================
+   ADMIN PANEL
+   ========================= */
+   app.get("/admin", async (req, res) => {
+     try {
+       const data = await IMEI.find().sort({ time: -1 });
+
+       const rows = data.map(d => `
+         <tr>
+           <td>${d.imei}</td>
+           <td>${d.email}</td>
+           <td>${d.type}</td>
+           <td>${d.status}</td>
+           <td>${d.paid}</td>
+           <td>${d.time}</td>
+         </tr>
+       `).join("");
+
+       res.send(`
+         <html>
+         <head>
+           <title>Admin Panel</title>
+           <style>
+             body { font-family: Arial; background:#111; color:#fff; }
+             table { width:100%; border-collapse: collapse; }
+             td, th { border:1px solid #444; padding:8px; }
+             th { background:#222; }
+           </style>
+         </head>
+         <body>
+           <h2>Admin Panel</h2>
+           <table>
+             <tr>
+               <th>Device ID</th>
+               <th>Email</th>
+               <th>Type</th>
+               <th>Status</th>
+               <th>Paid</th>
+               <th>Time</th>
+             </tr>
+             ${rows}
+           </table>
+         </body>
+         </html>
+       `);
+
+     } catch (err) {
+       res.status(500).send(err.message);
+     }
+   });
+
+   /* =========================
+   START SERVER
+   ========================= */
+   const PORT = process.env.PORT || 3000;
+
+   const server = app.listen(PORT, "0.0.0.0", () => {
+     console.log("🔥 SERVER LISTENING ON", PORT);
+   });
+
+   server.on("error", (err) => {
+     console.log("💥 SERVER ERROR:", err);
+   });
+
+ } catch (err) {
+   console.log("💥 START ERROR:", err);
+ }
+}
+
+start();
