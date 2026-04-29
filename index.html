@@ -6,25 +6,7 @@
 
 <meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
 
-<title>1Chip</title>
-
-<!-- SEO / ICON -->
-<link rel="icon" type="image/jpeg" href="images/logo.jpeg">
-<link rel="apple-touch-icon" href="images/logo.jpeg">
-
-<meta name="application-name" content="1Chip">
-<meta name="apple-mobile-web-app-title" content="1Chip">
-
-<meta property="og:title" content="1Chip">
-<meta property="og:site_name" content="1Chip">
-<meta property="og:description" content="Only for Apple devices">
-<meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
-<meta property="og:type" content="website">
-
-<meta name="description" content="IMEI Check service for Apple devices">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0a84ff">
+<title>IMEI Check</title>
 
 <style>
 *{
@@ -54,20 +36,6 @@ margin:0 0 5px 0;
 font-size:13px;
 color:#8e8e93;
 margin-bottom:20px;
-}
-
-.logo{
-display:flex;
-justify-content:center;
-margin-bottom:15px;
-}
-
-.logo img{
-width:95px;
-height:95px;
-border-radius:50%;
-object-fit:cover;
-box-shadow:0 10px 25px rgba(0,0,0,0.15);
 }
 
 .block{
@@ -116,6 +84,7 @@ border-radius:14px;
 font-size:15px;
 cursor:pointer;
 margin-top:10px;
+-webkit-appearance:none;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
@@ -149,16 +118,12 @@ color:#8e8e93;
 
 <div class="screen">
 
-<!-- LOGO -->
-<div class="logo">
-<img src="images/logo.jpeg" alt="logo">
-</div>
-
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
+<!-- IMEI / SN INPUT -->
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI">
+<input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
@@ -175,17 +140,25 @@ const API_URL = "https://imei-info.onrender.com";
 let imei = "";
 let type = "";
 
+/* IMEI / SN CHECK */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-if(!/^\d{15}$/.test(imei)){
+// IMEI check (15 digits)
+const isIMEI = /^\d{15}$/.test(imei);
+
+// SN check (10–12 letters/numbers)
+const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
+
+if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
  <div class="error">
-   ❌ Invalid IMEI<br>
-   Must be exactly 15 digits
+   ❌ Invalid IMEI / SN<br>
+   IMEI = 15 digits<br>
+   SN = 10–12 letters/numbers
  </div>
- <input id="imeiInput">
+ <input id="imeiInput" placeholder="Enter IMEI/SN">
  <button onclick="setIMEI()">Continue</button>
 `;
 return;
@@ -196,15 +169,20 @@ document.getElementById("imeiBlock").innerHTML = `
 `;
 
 setTimeout(()=>{
+
+let label = isIMEI ? "IMEI" : "SN";
+
 document.getElementById("imeiBlock").innerHTML = `
  <div class="value">
-   IMEI: <b>${imei}</b>
+   ${label}: <b>${imei}</b>
  </div>
 `;
+
 showType();
 }, 1200);
 }
 
+/* TYPE */
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
@@ -239,6 +217,7 @@ el.classList.add("active");
 showEmail();
 }
 
+/* EMAIL */
 function showEmail(){
 
 if(document.getElementById("emailBlock").innerHTML) return;
@@ -252,6 +231,7 @@ document.getElementById("emailBlock").innerHTML = `
 showPay();
 }
 
+/* PAY */
 function showPay(){
 
 if(document.getElementById("payBlock").innerHTML) return;
@@ -263,6 +243,7 @@ document.getElementById("payBlock").innerHTML = `
 `;
 }
 
+/* PAYMENT */
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
