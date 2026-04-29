@@ -10,9 +10,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =========================
-FAKE DATA (без Mongo)
+FAKE DATABASE (без Mongo)
 ========================= */
-let data = [
+let db = [
   {
     deviceId: "123456789012345",
     email: "test@gmail.com",
@@ -23,7 +23,7 @@ let data = [
   },
   {
     deviceId: "987654321098765",
-    email: "test2@gmail.com",
+    email: "demo@gmail.com",
     type: "carrier",
     status: "pending",
     paid: false,
@@ -32,10 +32,17 @@ let data = [
 ];
 
 /* =========================
+HOME
+========================= */
+app.get("/", (req, res) => {
+  res.send("🔥 SERVER IS RUNNING");
+});
+
+/* =========================
 ADMIN PANEL
 ========================= */
 app.get("/admin", (req, res) => {
-  const rows = data.map(d => `
+  const rows = db.map(d => `
     <tr>
       <td>${d.deviceId}</td>
       <td>${d.email}</td>
@@ -53,12 +60,12 @@ app.get("/admin", (req, res) => {
       <style>
         body { font-family: Arial; background:#111; color:#fff; }
         table { width:100%; border-collapse: collapse; }
-        td, th { border:1px solid #444; padding:8px; }
+        th, td { border:1px solid #444; padding:8px; }
         th { background:#222; }
       </style>
     </head>
     <body>
-      <h2>Admin Panel (TEST MODE)</h2>
+      <h2>ADMIN PANEL (CLEAN MODE)</h2>
       <table>
         <tr>
           <th>Device ID</th>
@@ -76,14 +83,7 @@ app.get("/admin", (req, res) => {
 });
 
 /* =========================
-TEST API
-========================= */
-app.get("/", (req, res) => {
-  res.send("SERVER WORKING 🚀");
-});
-
-/* =========================
-START
+START SERVER
 ========================= */
 const PORT = 3000;
 
