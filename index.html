@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
 <meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+
 <title>IMEI Check</title>
 
 <style>
@@ -36,7 +38,6 @@ color:#8e8e93;
 margin-bottom:20px;
 }
 
-/* BLOCK */
 .block{
 background:#fff;
 border-radius:14px;
@@ -45,7 +46,6 @@ padding:12px;
 margin-bottom:12px;
 }
 
-/* INPUT */
 input{
 width:100%;
 padding:14px;
@@ -54,37 +54,28 @@ outline:none;
 font-size:15px;
 }
 
-/* VALUE */
 .value{
 padding:14px;
 font-size:15px;
 word-break:break-all;
 }
 
-/* ROW */
 .row{
 padding:14px;
-display:flex;
-justify-content:space-between;
 cursor:pointer;
 font-size:15px;
+border:1px solid #e5e5ea;
+border-radius:12px;
+margin-bottom:10px;
+background:#fff;
+transition:0.2s;
 }
 
-.row .check{
-display:none;
-color:#0a84ff;
+.row.active{
+border:2px solid #0a84ff;
+background:#eef5ff;
 }
 
-.row.active .check{
-display:block;
-}
-
-.divider{
-height:1px;
-background:#e5e5ea;
-}
-
-/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -94,6 +85,9 @@ font-size:15px;
 cursor:pointer;
 margin-top:10px;
 -webkit-appearance:none;
+background:#0a84ff;
+color:#fff;
+font-weight:600;
 }
 
 .pay{
@@ -101,9 +95,21 @@ background:#34c759;
 color:white;
 font-weight:600;
 }
-.pay:disabled {
-background: #a8d5b7;
-cursor: not-allowed;
+
+.error{
+background:#ff3b30;
+color:#fff;
+padding:12px;
+border-radius:12px;
+font-size:14px;
+margin-bottom:10px;
+}
+
+.loading{
+text-align:center;
+padding:20px;
+font-size:14px;
+color:#8e8e93;
 }
 </style>
 </head>
@@ -112,86 +118,98 @@ cursor: not-allowed;
 
 <div class="screen">
 
-<h2>iPhone IMEI Check</h2>
+<h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<!-- IMEI -->
+<!-- IMEI / SN INPUT -->
 <div class="block" id="imeiBlock">
-  <input id="imeiInput" placeholder="Enter IMEI">
-  <button onclick="setIMEI()">Continue</button>
+<input id="imeiInput" placeholder="Enter IMEI/SN">
+<button onclick="setIMEI()">Continue</button>
 </div>
 
-<!-- TYPE -->
 <div id="typeBlock"></div>
-
-<!-- EMAIL -->
 <div id="emailBlock"></div>
-
-<!-- PAY -->
 <div id="payBlock"></div>
 
 </div>
 
 <script>
 
-// Обновленный URL сервера
-const API_URL = "https://imei-info.pages.dev";
+const API_URL = "https://imei-info.onrender.com";
 
 let imei = "";
 let type = "";
 
-/* IMEI */
+/* IMEI / SN CHECK */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-if(!imei){
- alert("Enter IMEI");
- return;
+// IMEI check (15 digits)
+const isIMEI = /^\d{15}$/.test(imei);
+
+// SN check (10–12 letters/numbers)
+const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
+
+if(!isIMEI && !isSN){
+document.getElementById("imeiBlock").innerHTML = `
+ <div class="error">
+   ❌ Invalid IMEI / SN<br>
+   IMEI = 15 digits<br>
+   SN = 10–12 letters/numbers
+ </div>
+ <input id="imeiInput" placeholder="Enter IMEI/SN">
+ <button onclick="setIMEI()">Continue</button>
+`;
+return;
 }
 
 document.getElementById("imeiBlock").innerHTML = `
+<div class="loading">Checking device...</div>
+`;
+
+setTimeout(()=>{
+
+let label = isIMEI ? "IMEI" : "SN";
+
+document.getElementById("imeiBlock").innerHTML = `
  <div class="value">
-   IMEI: <b>${imei}</b>
+   ${label}: <b>${imei}</b>
  </div>
 `;
 
 showType();
+}, 1200);
 }
 
 /* TYPE */
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
- <div class="block">
+<div class="block">
 
-   <div class="row" onclick="setType(this,'carrier')">
-     Carrier status <span class="check">✓</span>
-   </div>
-
-   <div class="divider"></div>
-
-   <div class="row" onclick="setType(this,'findmy')">
-     Find My iPhone <span class="check">✓</span>
-   </div>
-
-   <div class="divider"></div>
-
-   <div class="row" onclick="setType(this,'blacklist')">
-     Blacklist check <span class="check">✓</span>
-   </div>
-
+ <div class="row" onclick="setType(this,'carrier')">
+   Carrier status
  </div>
+
+ <div class="row" onclick="setType(this,'findmy')">
+   Find My iPhone
+ </div>
+
+ <div class="row" onclick="setType(this,'blacklist')">
+   Blacklist check
+ </div>
+
+</div>
 `;
 }
 
-/* SELECT TYPE */
 function setType(el,t){
 
 type = t;
 
 document.querySelectorAll(".row").forEach(e=>{
- e.classList.remove("active");
+e.classList.remove("active");
 });
 
 el.classList.add("active");
@@ -205,9 +223,9 @@ function showEmail(){
 if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
- <div class="block">
-   <input id="email" placeholder="Enter email">
- </div>
+<div class="block">
+ <input id="email" placeholder="Enter email">
+</div>
 `;
 
 showPay();
@@ -219,9 +237,9 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
- <button class="pay" id="payButton" onclick="payToCheck()">
-   Pay to Check $1.99
- </button>
+<button class="pay" onclick="payToCheck()">
+ Pay to Check $1.99
+</button>
 `;
 }
 
@@ -229,60 +247,28 @@ document.getElementById("payBlock").innerHTML = `
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
-const payButton = document.getElementById("payButton");
 
-if(!imei){
- alert("Enter IMEI");
- return;
+if(!imei || !type || !email){
+alert("Fill all fields");
+return;
 }
 
-if(!email){
- alert("Enter email");
- return;
-}
+const res = await fetch(API_URL + "/create-payment", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({
+ deviceId: imei,
+ email: email,
+ type: type
+})
+});
 
-if(!type){
- alert("Select type");
- return;
-}
+const data = await res.json();
 
-// Блокируем кнопку, чтобы избежать двойного нажатия
-payButton.disabled = true;
-payButton.innerText = "Loading...";
-
-try {
-  const res = await fetch(API_URL + "/create-payment", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      deviceId: imei,
-      email: email,
-      type: type
-    })
-  });
-
-  if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Server Error: ${res.status} - ${errorText}`);
-  }
-
-  const data = await res.json();
-
-  if(data.url){
-    window.location.href = data.url;
-  } else {
-    alert("Payment error: No URL in response. Check server logs.");
-    console.log(data);
-    // Разблокируем кнопку, если что-то пошло не так
-    payButton.disabled = false;
-    payButton.innerText = "Pay to Check $1.99";
-  }
-} catch (err) {
-  alert("Connection error: " + err.message);
-  console.error(err);
-  // Разблокируем кнопку при ошибке соединения
-  payButton.disabled = false;
-  payButton.innerText = "Pay to Check $1.99";
+if(data.url){
+window.location.href = data.url;
+} else {
+alert("Payment error");
 }
 }
 
