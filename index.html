@@ -1,3 +1,5 @@
+app.get("/", (req, res) => {
+      res.send(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -113,63 +115,4 @@ async function payToCheck(){
       `);
     });
 
-    /* =========================
-    АДМИН ПАНЕЛЬ
-    ========================= */
-    app.get("/admin", async (req, res) => {
-      try {
-        const data = await Check.find().sort({ time: -1 });
-        const rows = data.map(d => `
-          <tr>
-            <td>${d.deviceId}</td>
-            <td>${d.email}</td>
-            <td>${d.type}</td>
-            <td>${d.status}</td>
-            <td>${d.paid ? 'YES' : 'NO'}</td>
-            <td>${d.time}</td>
-          </tr>
-        `).join("");
-
-        res.send(`
-          <html>
-          <head>
-            <title>Admin Panel</title>
-            <style>
-              body { font-family: Arial; background:#111; color:#fff; }
-              table { width:100%; border-collapse: collapse; }
-              td, th { border:1px solid #444; padding:8px; }
-              th { background:#222; }
-            </style>
-          </head>
-          <body>
-            <h2>Admin Panel</h2>
-            <table>
-              <tr><th>Device ID</th><th>Email</th><th>Type</th><th>Status</th><th>Paid</th><th>Time</th></tr>
-              ${rows}
-            </table>
-          </body>
-          </html>
-        `);
-      } catch (err) {
-        res.status(500).send(err.message);
-      }
-    });
-
-    /* =========================
-    ЗАПУСК ПОРТА
-    ========================= */
-    const PORT = process.env.PORT || 3000;
-    const server = app.listen(PORT, "0.0.0.0", () => {
-      console.log("🔥 СЕРВЕР РАБОТАЕТ НА ПОРТУ", PORT);
-    });
-
-    server.on("error", (err) => {
-      console.log("💥 ОШИБКА СЕРВЕРА:", err);
-    });
-
-  } catch (err) {
-    console.log("💥 ОШИБКА ЗАПУСКА:", err);
-  }
-}
-
-start();
+    /*
