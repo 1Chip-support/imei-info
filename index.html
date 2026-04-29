@@ -3,84 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
+<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
 <title>IMEI Check</title>
 
 <style>
-*{box-sizing:border-box;}
+*{
+  box-sizing:border-box;
+}
 
 body{
-margin:0;
-font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-background:#f2f2f7;
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+  background:#f2f2f7;
+  overflow-x:hidden;
 }
 
 .screen{
-padding:55px 16px;
-max-width:420px;
-margin:0 auto;
+  padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+  max-width:420px;
+  margin:0 auto;
 }
 
 h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px;
+  font-size:22px;
+  font-weight:600;
+  margin:0 0 5px 0;
 }
 
 .sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
+  font-size:13px;
+  color:#8e8e93;
+  margin-bottom:20px;
 }
 
+/* BLOCK */
 .block{
-background:#fff;
-border-radius:14px;
-border:1px solid #e5e5ea;
-padding:12px;
-margin-bottom:12px;
+  background:#fff;
+  border-radius:14px;
+  border:1px solid #e5e5ea;
+  padding:12px;
+  margin-bottom:12px;
 }
 
+/* INPUT */
 input{
-width:100%;
-padding:14px;
-border:none;
-outline:none;
-font-size:15px;
+  width:100%;
+  padding:14px;
+  border:none;
+  outline:none;
+  font-size:15px;
 }
 
+/* VALUE */
 .value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
+  padding:14px;
+  font-size:15px;
+  word-break:break-all;
 }
 
+/* ROW */
 .row{
-padding:14px;
-display:flex;
-justify-content:space-between;
-cursor:pointer;
+  padding:14px;
+  display:flex;
+  justify-content:space-between;
+  cursor:pointer;
+  font-size:15px;
 }
 
-.row .check{display:none;color:#0a84ff;}
-.row.active .check{display:block;}
+.row .check{
+  display:none;
+  color:#0a84ff;
+}
 
-.divider{height:1px;background:#e5e5ea;}
+.row.active .check{
+  display:block;
+}
 
+.divider{
+  height:1px;
+  background:#e5e5ea;
+}
+
+/* BUTTON */
 button{
-width:100%;
-padding:14px;
-border:none;
-border-radius:14px;
-font-size:15px;
-cursor:pointer;
-margin-top:10px;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  font-size:15px;
+  cursor:pointer;
+  margin-top:10px;
+  -webkit-appearance:none;
 }
 
 .pay{
-background:#34c759;
-color:#fff;
-font-weight:600;
+  background:#34c759;
+  color:white;
+  font-weight:600;
+}
+.pay:disabled {
+  background: #a8d5b7;
+  cursor: not-allowed;
 }
 </style>
 </head>
@@ -89,156 +112,178 @@ font-weight:600;
 
 <div class="screen">
 
-<h2>iPhone IMEI Check</h2>
-<div class="sub">Only for Apple devices</div>
+  <h2>iPhone IMEI Check</h2>
+  <div class="sub">Only for Apple devices</div>
 
-<div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI">
-<button onclick="setIMEI()">Continue</button>
-</div>
+  <!-- IMEI -->
+  <div class="block" id="imeiBlock">
+    <input id="imeiInput" placeholder="Enter IMEI">
+    <button onclick="setIMEI()">Continue</button>
+  </div>
 
-<div id="typeBlock"></div>
-<div id="emailBlock"></div>
-<div id="payBlock"></div>
+  <!-- TYPE -->
+  <div id="typeBlock"></div>
+
+  <!-- EMAIL -->
+  <div id="emailBlock"></div>
+
+  <!-- PAY -->
+  <div id="payBlock"></div>
 
 </div>
 
 <script>
 
-/////////////////////////////////////
-// 🔥 FIXED API (ВАЖНО)
-/////////////////////////////////////
-const API_URL = "https://imei-info.onrender.com";
+// Обновленный URL сервера
+const API_URL = "https://imei-info.pages.dev";
 
 let imei = "";
 let type = "";
 
-/////////////////////////////////////
-// IMEI
-/////////////////////////////////////
+/* IMEI */
 function setIMEI(){
 
-imei = document.getElementById("imeiInput").value.trim();
+  imei = document.getElementById("imeiInput").value.trim();
 
-if(!imei){
- alert("Enter IMEI");
- return;
+  if(!imei){
+   alert("Enter IMEI");
+   return;
+  }
+
+  document.getElementById("imeiBlock").innerHTML = `
+   <div class="value">
+     IMEI: <b>${imei}</b>
+   </div>
+  `;
+
+  showType();
 }
 
-document.getElementById("imeiBlock").innerHTML = `
- <div class="value">IMEI: <b>${imei}</b></div>
-`;
-
-showType();
-}
-
-/////////////////////////////////////
-// TYPE
-/////////////////////////////////////
+/* TYPE */
 function showType(){
 
-document.getElementById("typeBlock").innerHTML = `
-<div class="block">
+  document.getElementById("typeBlock").innerHTML = `
+   <div class="block">
 
-<div class="row" onclick="setType(this,'carrier')">
-Carrier status <span class="check">✓</span>
-</div>
+     <div class="row" onclick="setType(this,'carrier')">
+       Carrier status <span class="check">✓</span>
+     </div>
 
-<div class="divider"></div>
+     <div class="divider"></div>
 
-<div class="row" onclick="setType(this,'findmy')">
-Find My iPhone <span class="check">✓</span>
-</div>
+     <div class="row" onclick="setType(this,'findmy')">
+       Find My iPhone <span class="check">✓</span>
+     </div>
 
-<div class="divider"></div>
+     <div class="divider"></div>
 
-<div class="row" onclick="setType(this,'blacklist')">
-Blacklist check <span class="check">✓</span>
-</div>
+     <div class="row" onclick="setType(this,'blacklist')">
+       Blacklist check <span class="check">✓</span>
+     </div>
 
-</div>
-`;
+   </div>
+  `;
 }
 
-/////////////////////////////////////
-// SELECT TYPE
-/////////////////////////////////////
+/* SELECT TYPE */
 function setType(el,t){
 
-type = t;
+  type = t;
 
-document.querySelectorAll(".row").forEach(e=>{
- e.classList.remove("active");
-});
+  document.querySelectorAll(".row").forEach(e=>{
+   e.classList.remove("active");
+  });
 
-el.classList.add("active");
+  el.classList.add("active");
 
-showEmail();
+  showEmail();
 }
 
-/////////////////////////////////////
-// EMAIL
-/////////////////////////////////////
+/* EMAIL */
 function showEmail(){
 
-document.getElementById("emailBlock").innerHTML = `
-<div class="block">
-<input id="email" placeholder="Enter email">
-<button onclick="showPay()">Continue</button>
-</div>
-`;
+  if(document.getElementById("emailBlock").innerHTML) return;
+
+  document.getElementById("emailBlock").innerHTML = `
+   <div class="block">
+     <input id="email" placeholder="Enter email">
+   </div>
+  `;
+
+  showPay();
 }
 
-/////////////////////////////////////
-// PAY BUTTON
-/////////////////////////////////////
+/* PAY */
 function showPay(){
 
-document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">
-Pay $1.99
-</button>
-`;
+  if(document.getElementById("payBlock").innerHTML) return;
+
+  document.getElementById("payBlock").innerHTML = `
+   <button class="pay" id="payButton" onclick="payToCheck()">
+     Pay to Check $1.99
+   </button>
+  `;
 }
 
-/////////////////////////////////////
-// PAYMENT
-/////////////////////////////////////
+/* PAYMENT */
 async function payToCheck(){
 
-const email = document.getElementById("email").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const payButton = document.getElementById("payButton");
 
-if(!imei || !type || !email){
- alert("Fill all fields");
- return;
-}
+  if(!imei){
+   alert("Enter IMEI");
+   return;
+  }
 
-try{
+  if(!email){
+   alert("Enter email");
+   return;
+  }
 
-const res = await fetch(API_URL + "/create-payment", {
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body: JSON.stringify({
-   deviceId: imei,
-   email: email,
-   type: type
- })
-});
+  if(!type){
+   alert("Select type");
+   return;
+  }
 
-const data = await res.json();
+  // Блокируем кнопку, чтобы избежать двойного нажатия
+  payButton.disabled = true;
+  payButton.innerText = "Loading...";
 
-if(data && data.url){
- window.location.href = data.url;
-} else {
- alert("Payment error");
- console.log(data);
-}
+  try {
+    const res = await fetch(API_URL + "/create-payment", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        deviceId: imei,
+        email: email,
+        type: type
+      })
+    });
 
-}catch(e){
- alert("Server error");
- console.log(e);
-}
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server Error: ${res.status} - ${errorText}`);
+    }
 
+    const data = await res.json();
+
+    if(data.url){
+      window.location.href = data.url;
+    } else {
+      alert("Payment error: No URL in response. Check server logs.");
+      console.log(data);
+      // Разблокируем кнопку, если что-то пошло не так
+      payButton.disabled = false;
+      payButton.innerText = "Pay to Check $1.99";
+    }
+  } catch (err) {
+    alert("Connection error: " + err.message);
+    console.error(err);
+    // Разблокируем кнопку при ошибке соединения
+    payButton.disabled = false;
+    payButton.innerText = "Pay to Check $1.99";
+  }
 }
 
 </script>
