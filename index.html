@@ -132,8 +132,8 @@ font-weight:600;
 
 <script>
 
-// Исправлено: теперь запросы идут на тот же адрес, где находится сайт
-const API_URL = "";
+// ✅ 
+const API_URL = "http://130.61.122.182:3000";
 
 let imei = "";
 let type = "";
@@ -204,7 +204,7 @@ if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
  <div class="block">
-   <input id="email" type="email" placeholder="Enter email">
+   <input id="email" placeholder="Enter email">
  </div>
 `;
 
