@@ -2,114 +2,80 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
-<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>IMEI Check</title>
 
 <style>
-*{
-box-sizing:border-box;
-}
-
 body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
-overflow-x:hidden;
 }
 
 .screen{
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
-margin:0 auto;
+margin:auto;
+padding:40px 16px;
 }
 
-h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px 0;
-}
-
-.sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
-}
+h2{margin:0 0 10px;}
 
 .block{
 background:#fff;
-border-radius:14px;
-border:1px solid #e5e5ea;
 padding:12px;
-margin-bottom:12px;
+border-radius:12px;
+margin-bottom:10px;
 }
 
 input{
 width:100%;
-padding:14px;
-border:none;
-outline:none;
+padding:12px;
 font-size:15px;
-}
-
-.value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
-}
-
-.row{
-padding:14px;
-cursor:pointer;
-font-size:15px;
-border:1px solid #e5e5ea;
-border-radius:12px;
-margin-bottom:10px;
-background:#fff;
-transition:0.2s;
-}
-
-.row.active{
-border:2px solid #0a84ff;
-background:#eef5ff;
+border:1px solid #ddd;
+border-radius:10px;
 }
 
 button{
 width:100%;
-padding:14px;
-border:none;
-border-radius:14px;
-font-size:15px;
-cursor:pointer;
+padding:12px;
 margin-top:10px;
--webkit-appearance:none;
+border:none;
+border-radius:12px;
 background:#0a84ff;
-color:#fff;
-font-weight:600;
-}
-
-.pay{
-background:#34c759;
 color:white;
 font-weight:600;
 }
 
-.error{
-background:#ff3b30;
-color:#fff;
+.row{
 padding:12px;
-border-radius:12px;
-font-size:14px;
+border:1px solid #ddd;
+border-radius:10px;
+margin-bottom:8px;
+cursor:pointer;
+}
+
+.row.active{
+border:2px solid #0a84ff;
+background:#eaf3ff;
+}
+
+.pay{
+background:#34c759;
+}
+
+.error{
+color:white;
+background:#ff3b30;
+padding:10px;
+border-radius:10px;
 margin-bottom:10px;
 }
 
 .loading{
 text-align:center;
-padding:20px;
-font-size:14px;
-color:#8e8e93;
+padding:10px;
+color:#666;
 }
 </style>
 </head>
@@ -119,54 +85,98 @@ color:#8e8e93;
 <div class="screen">
 
 <h2>IMEI Check</h2>
-<div class="sub">Only for Apple devices</div>
 
-<!-- IMEI / SN INPUT -->
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
 <div id="typeBlock"></div>
-<div id="emailBlock"></div>
 <div id="payBlock"></div>
 
 </div>
 
 <script>
 
-const API_URL = "https://imei-info.onrender.com";
+const API_URL = "http://130.61.122.182:3000";
 
 let imei = "";
 let type = "";
 
-/* IMEI / SN CHECK */
-function setIMEI(){
+/* STEP 1 */
+function setIMEI() {
+  imei = document.getElementById("imeiInput").value.trim();
 
-imei = document.getElementById("imeiInput").value.trim();
+  const isIMEI = /^\d{15}$/.test(imei);
+  const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
-// IMEI check (15 digits)
-const isIMEI = /^\d{15}$/.test(imei);
+  if (!isIMEI && !isSN) {
+    document.getElementById("imeiBlock").innerHTML = `
+      <div class="error">Invalid IMEI / SN</div>
+      <input id="imeiInput" placeholder="Enter IMEI / SN">
+      <button onclick="setIMEI()">Continue</button>
+    `;
+    return;
+  }
 
-// SN check (10–12 letters/numbers)
-const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
+  document.getElementById("imeiBlock").innerHTML =
+    <div class="loading">Checking device...</div>;
 
-if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML = `
-  <div class="error">
-    ❌ Invalid IMEI / SN<br>
-    IMEI = 15 digits<br>
-    SN = 10–12 letters/numbers
-  </div>
-  <input id="imeiInput" placeholder="Enter IMEI/SN">
-  <button onclick="setIMEI()">Continue</button>
-`;
-return;
+  setTimeout(showType, 600);
 }
 
-document.getElementById("imeiBlock").innerHTML = `
-<div class="loading">Checking device...</div>
-`;
+/* STEP 2 */
+function showType() {
+  document.getElementById("typeBlock").innerHTML = `
+    <div class="block">
+      <div class="row" onclick="selectType('carrier')">Carrier Check</div>
+      <div class="row" onclick="selectType('blacklist')">Blacklist Check</div>
+      <button onclick="goPay()">Continue</button>
+    </div>
+  `;
+}
+
+function selectType(t) {
+  type = t;
+  document.querySelectorAll(".row").forEach(r => r.classList.remove("active"));
+  event.target.classList.add("active");
+}
+
+/* STEP 3 PAYMENT */
+async function goPay() {
+  document.getElementById("payBlock").innerHTML =
+    <div class="loading">Creating payment...</div>;
+
+  try {
+    const res = await fetch(API_URL + "/create-payment", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        deviceId: imei,
+        email: "test@test.com",
+        type: type || "carrier"
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      document.getElementById("payBlock").innerHTML =
+        <div class="error">${data.error || "Payment error"}</div>;
+    }
+
+  } catch (e) {
+    document.getElementById("payBlock").innerHTML =
+      <div class="error">Network error</div>;
+  }
+}
+
+</script>
+
+</body>
+</html>
 
 setTimeout(()=>{
 
