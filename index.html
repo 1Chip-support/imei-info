@@ -1,86 +1,137 @@
-/* STEP 1 CONTINUE */
-setTimeout(() => {
-  const label = /^\d{15}$/.test(imei) ? "IMEI" : "SN";
+<script>
 
-  document.getElementById("imeiBlock").innerHTML = `
-    <div class="value">${label}: ${imei}</div>
-  `;
+const API_URL = "https://imei-info.onrender.com";
 
-  showType();
-}, 800);
+let imei = "";
+let type = "";
 
-/* STEP 2 TYPE */
+/* IMEI */
+function setIMEI(){
+
+imei = document.getElementById("imeiInput").value.trim();
+
+if(!imei){
+ alert("Enter IMEI");
+ return;
+}
+
+document.getElementById("imeiBlock").innerHTML = `
+ <div class="value">
+   IMEI: <b>${imei}</b>
+ </div>
+`;
+
+showType();
+}
+
+/* TYPE */
 function showType(){
-  document.getElementById("typeBlock").innerHTML = `
-    <div class="block">
-      <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
-      <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
-      <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
-    </div>
-  `;
+
+document.getElementById("typeBlock").innerHTML = `
+ <div class="block">
+
+   <div class="row" onclick="setType(this,'carrier')">
+     Carrier status <span class="check">✓</span>
+   </div>
+
+   <div class="divider"></div>
+
+   <div class="row" onclick="setType(this,'findmy')">
+     Find My iPhone <span class="check">✓</span>
+   </div>
+
+   <div class="divider"></div>
+
+   <div class="row" onclick="setType(this,'blacklist')">
+     Blacklist check <span class="check">✓</span>
+   </div>
+
+ </div>
+`;
 }
 
-function setType(el, t){
-  type = t;
+/* SELECT TYPE */
+function setType(el,t){
 
-  document.querySelectorAll(".row").forEach(e=>{
-    e.classList.remove("active");
-  });
+type = t;
 
-  el.classList.add("active");
+document.querySelectorAll(".row").forEach(e=>{
+ e.classList.remove("active");
+});
 
-  showEmail();
+el.classList.add("active");
+
+showEmail(); // 👈 идём дальше
 }
 
-/* STEP 3 EMAIL */
+/* EMAIL (FIXED) */
 function showEmail(){
-  document.getElementById("emailBlock").innerHTML = `
-    <div class="block">
-      <input id="email" placeholder="Enter email">
-      <button onclick="showPay()">Continue</button>
-    </div>
-  `;
+
+document.getElementById("emailBlock").innerHTML = `
+ <div class="block">
+   <input id="email" placeholder="Enter email">
+   <button onclick="showPay()">Continue</button>
+ </div>
+`;
 }
 
-/* STEP 4 PAY BUTTON */
+/* PAY BUTTON */
 function showPay(){
-  document.getElementById("payBlock").innerHTML = `
-    <div class="block">
-      <button class="pay" onclick="payToCheck()">Pay $1.99</button>
-    </div>
-  `;
+
+document.getElementById("payBlock").innerHTML = `
+ <button class="pay" onclick="payToCheck()">
+   Pay $1.99
+ </button>
+`;
 }
 
-/* STEP 5 PAYMENT */
+/* PAYMENT (FIXED STRIPE FLOW) */
 async function payToCheck(){
 
-  const email = document.getElementById("email").value.trim();
+const email = document.getElementById("email").value.trim();
 
-  if(!imei  !type  !email){
-    alert("Fill all fields");
-    return;
-  }
-
-  try{
-    const res = await fetch(API_URL + "/create-payment", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        deviceId: imei,
-        email: email,
-        type: type
-      })
-    });
-
-    const data = await res.json();
-
-    if(data.url){
-      window.location.href = data.url;
-    } else {
-      alert(data.error || "Payment error");
-    }
-
-  } catch(e){
-    alert("Network error");
-  }
+if(!imei){
+ alert("Enter IMEI");
+ return;
 }
+
+if(!type){
+ alert("Select type");
+ return;
+}
+
+if(!email){
+ alert("Enter email");
+ return;
+}
+
+try{
+
+const res = await fetch(API_URL + "/create-payment", {
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body: JSON.stringify({
+   deviceId: imei,
+   email: email,
+   type: type
+ })
+});
+
+const data = await res.json();
+
+console.log("PAY RESPONSE:", data);
+
+if(data.url){
+ window.location.href = data.url;
+} else {
+ alert(data.error || "Payment error");
+}
+
+}catch(e){
+ alert("Network error");
+ console.log(e);
+}
+
+}
+
+</script>
