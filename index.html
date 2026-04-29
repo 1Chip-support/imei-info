@@ -1,89 +1,267 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMEI Check</title>
-  <style>
-    /* Базовые стили для кнопки, чтобы она выглядела красиво */
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    .pay {
-      background-color: #28a745;
-      color: white;
-      padding: 15px 30px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    .pay:active { background-color: #218838; }
-    input { padding: 10px; margin: 10px 0; width: 80%; max-width: 300px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+
+<title>IMEI Check</title>
+
+<style>
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+background:#f2f2f7;
+overflow-x:hidden;
+}
+
+.screen{
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+max-width:420px;
+margin:0 auto;
+}
+
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
+}
+
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
+
+/* BLOCK */
+.block{
+background:#fff;
+border-radius:14px;
+border:1px solid #e5e5ea;
+padding:12px;
+margin-bottom:12px;
+}
+
+/* INPUT */
+input{
+width:100%;
+padding:14px;
+border:none;
+outline:none;
+font-size:15px;
+}
+
+/* VALUE */
+.value{
+padding:14px;
+font-size:15px;
+word-break:break-all;
+}
+
+/* ROW */
+.row{
+padding:14px;
+display:flex;
+justify-content:space-between;
+cursor:pointer;
+font-size:15px;
+}
+
+.row .check{
+display:none;
+color:#0a84ff;
+}
+
+.row.active .check{
+display:block;
+}
+
+.divider{
+height:1px;
+background:#e5e5ea;
+}
+
+/* BUTTON */
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:14px;
+font-size:15px;
+cursor:pointer;
+margin-top:10px;
+-webkit-appearance:none;
+}
+
+.pay{
+background:#34c759;
+color:white;
+font-weight:600;
+}
+</style>
 </head>
+
 <body>
 
-  <!-- Поля для ввода (убедись, что у тебя есть эти элементы на странице) -->
-  <input type="text" id="imei" placeholder="Введите IMEI">
-  <input type="email" id="email" placeholder="Введите Email">
-  
-  <!-- Сюда скрипт добавит кнопку -->
-  <div id="payBlock"></div>
+<div class="screen">
 
-  <script>
-    // Предположим, что переменные imei и type берутся откуда-то выше. 
-    // Если они берутся из input, лучше считывать их прямо в функции payToCheck.
-    // Для надежности я добавил считывание IMEI прямо из поля ввода:
+<h2>iPhone IMEI Check</h2>
+<div class="sub">Only for Apple devices</div>
 
-    /* PAYMENT BUTTON CREATION */
-    if(document.getElementById("payBlock").innerHTML) return;
+<!-- IMEI -->
+<div class="block" id="imeiBlock">
+<input id="imeiInput" placeholder="Enter IMEI">
+<button onclick="setIMEI()">Continue</button>
+</div>
 
-    document.getElementById("payBlock").innerHTML = `
-      <button class="pay" onclick="payToCheck()">
-        Pay to Check $1.99
-      </button>
-    `;
+<!-- TYPE -->
+<div id="typeBlock"></div>
 
-    /* PAYMENT FUNCTION */
-    async function payToCheck(){
-      // Считываем значения полей
-      const imeiInput = document.getElementById("imei").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const type = "carrier"; // Или то значение type, которое тебе нужно
+<!-- EMAIL -->
+<div id="emailBlock"></div>
 
-      // ИСПРАВЛЕНО: добавлены знаки || (ИЛИ) для правильной проверки
-      if(!imeiInput  !type  !email){
-        alert("Fill all fields (IMEI and Email)");
-        return;
-      }
+<!-- PAY -->
+<div id="payBlock"></div>
 
-      // Правильный адрес твоего сервера
-      const SERVER_URL = "https://imei-info.pages.dev"; 
+</div>
 
-      try {
-        const res = await fetch(SERVER_URL + "/create-payment", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({
-            deviceId: imeiInput,
-            email: email,
-            type: type
-          })
-        });
+<script>
 
-        const data = await res.json();
+const API_URL = "https://imei-info.onrender.com";
 
-        if(data.url){
-          window.location.href = data.url; // Переход на Stripe
-        } else {
-          alert("Payment error: " + (data.error || "Unknown error"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Connection error. Check your internet.");
-      }
-    }
-  </script>
+let imei = "";
+let type = "";
+
+/* IMEI */
+function setIMEI(){
+
+imei = document.getElementById("imeiInput").value.trim();
+
+if(!imei){
+  alert("Enter IMEI");
+  return;
+}
+
+document.getElementById("imeiBlock").innerHTML = `
+  <div class="value">
+    IMEI: <b>${imei}</b>
+  </div>
+`;
+
+showType();
+}
+
+/* TYPE (FIXED - NO DEFAULT ACTIVE) */
+function showType(){
+
+document.getElementById("typeBlock").innerHTML = `
+  <div class="block">
+
+    <div class="row" onclick="setType(this,'carrier')">
+      Carrier status <span class="check">✓</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row" onclick="setType(this,'findmy')">
+      Find My iPhone <span class="check">✓</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row" onclick="setType(this,'blacklist')">
+      Blacklist check <span class="check">✓</span>
+    </div>
+
+  </div>
+`;
+}
+
+/* SELECT TYPE */
+function setType(el,t){
+
+type = t;
+
+document.querySelectorAll(".row").forEach(e=>{
+  e.classList.remove("active");
+});
+
+el.classList.add("active");
+
+showEmail();
+}
+
+/* EMAIL */
+function showEmail(){
+
+if(document.getElementById("emailBlock").innerHTML) return;
+
+document.getElementById("emailBlock").innerHTML = `
+  <div class="block">
+    <input id="email" placeholder="Enter email">
+  </div>
+`;
+
+showPay();
+}
+
+/* PAY */
+function showPay(){
+
+if(document.getElementById("payBlock").innerHTML) return;
+
+document.getElementById("payBlock").innerHTML = `
+  <button class="pay" onclick="payToCheck()">
+    Pay to Check $1.99
+  </button>
+`;
+}
+
+/* PAYMENT */
+async function payToCheck(){
+
+const email = document.getElementById("email").value.trim();
+
+if(!imei){
+  alert("Enter IMEI");
+  return;
+}
+
+if(!email){
+  alert("Enter email");
+  return;
+}
+
+if(!type){
+  alert("Select type");
+  return;
+}
+
+const res = await fetch(API_URL + "/create-payment", {
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body: JSON.stringify({
+    deviceId: imei,
+    email: email,
+    type: type
+  })
+});
+
+const data = await res.json();
+
+if(data.url){
+  window.location.href = data.url;
+} else {
+  alert("Payment error");
+}
+}
+
+</script>
 
 </body>
 </html>
