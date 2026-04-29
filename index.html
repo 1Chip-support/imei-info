@@ -1,210 +1,247 @@
-require("dotenv").config();
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-const mongoose = require("mongoose");
-const express = require("express");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
+<title>IMEI Check</title>
 
-const app = express();
+<style>
+*{box-sizing:border-box;}
 
-/* =========================
-GLOBAL MODEL
-========================= */
-let Check;   // 👈 ВАЖНО: поднят выше webhook
-
-/* =========================
-SAFETY CHECK
-========================= */
-if (!process.env.STRIPE_SECRET) {
-  throw new Error("❌ STRIPE_SECRET is missing in .env file");
+body{
+margin:0;
+font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+background:#f2f2f7;
 }
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
-
-/* =========================
-MIDDLEWARE
-========================= */
-app.use(cors());
-app.use(cookieParser());
-
-/* =========================
-WEBHOOK
-========================= */
-app.post(
-  "/stripe-webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      const event = JSON.parse(req.body.toString());
-
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
-
-        const deviceId = session.metadata?.deviceId;
-        const email = session.metadata?.email;
-        const type = session.metadata?.type;
-
-        if (deviceId) {
-          await Check.updateOne(
-            { deviceId },
-            {
-              $set: {
-                deviceId,
-                email,
-                type,
-                paid: true,
-                status: "paid",
-                time: new Date(),
-              },
-            },
-            { upsert: true }
-          );
-
-          console.log("💰 PAYMENT SAVED:", deviceId);
-        }
-      }
-
-      res.json({ received: true });
-    } catch (err) {
-      console.log("WEBHOOK ERROR:", err.message);
-      res.status(400).send("Webhook error");
-    }
-  }
-);
-
-/* =========================
-JSON BODY
-========================= */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-/* =========================
-START
-========================= */
-async function start() {
-  try {
-    console.log("🔥 STARTING SERVER...");
-
-    await mongoose.connect(process.env.MONGO_URL);
-    console.log("MongoDB connected");
-
-    /* =========================
-    MODEL
-    ========================= */
-    const CheckSchema = new mongoose.Schema({
-      deviceId: { type: String, unique: true },
-      email: String,
-      type: String,
-      status: { type: String, default: "pending" },
-      price: { type: Number, default: 1.99 },
-      paid: { type: Boolean, default: false },
-      time: { type: Date, default: Date.now },
-    });
-
-    Check = mongoose.model("Check", CheckSchema);
-
-    /* =========================
-    VALIDATION
-    ========================= */
-    function isValidDeviceId(deviceId) {
-      if (!deviceId) return false;
-      deviceId = deviceId.trim();
-
-      return /^\d{15}$/.test(deviceId) ||
-             /^[A-Za-z0-9]{10,12}$/.test(deviceId);
-    }
-
-    /* =========================
-    CREATE PAYMENT
-    ========================= */
-    app.post("/create-payment", async (req, res) => {
-      try {
-        // 🔥 FIX: поддержка id + deviceId
-        const deviceId = req.body.deviceId || req.body.id;
-        const email = req.body.email;
-        const type = req.body.type;
-
-        if (!isValidDeviceId(deviceId)) {
-          return res.status(400).json({ error: "Invalid ID" });
-        }
-
-        await Check.updateOne(
-          { deviceId },
-          { $set: { email, type } },
-          { upsert: true }
-        );
-
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "payment",
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: `IMEI Check (${type || "carrier"})`,
-                },
-                unit_amount: 199,
-              },
-              quantity: 1,
-            },
-          ],
-          metadata: { deviceId, email, type },
-          success_url: "https://imei-info.pages.dev",
-          cancel_url: "https://imei-info.pages.dev",
-        });
-
-        res.json({ url: session.url });
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
-
-    /* =========================
-    ADMIN
-    ========================= */
-    app.get("/admin", async (req, res) => {
-      const data = await Check.find().sort({ time: -1 });
-
-      const rows = data
-        .map(
-          (d) => `
-        <tr>
-          <td>${d.deviceId}</td>
-          <td>${d.email}</td>
-          <td>${d.type}</td>
-          <td>${d.status}</td>
-          <td>${d.paid}</td>
-          <td>${d.time}</td>
-        </tr>`
-        )
-        .join("");
-
-      res.send(`
-        <html>
-        <body style="background:#111;color:white;font-family:Arial">
-        <h2>Admin Panel</h2>
-        <table border="1" width="100%">
-        <tr>
-          <th>ID</th><th>Email</th><th>Type</th><th>Status</th><th>Paid</th><th>Time</th>
-        </tr>
-        ${rows}
-        </table>
-        </body>
-        </html>
-      `);
-    });
-
-    /* =========================
-    START SERVER
-    ========================= */
-    app.listen(3000, "0.0.0.0", () => {
-      console.log("🔥 SERVER LISTENING ON 3000");
-    });
-
-  } catch (err) {
-    console.log("💥 START ERROR:", err);
-  }
+.screen{
+padding:55px 16px;
+max-width:420px;
+margin:0 auto;
 }
 
-start();
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px;
+}
+
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
+
+.block{
+background:#fff;
+border-radius:14px;
+border:1px solid #e5e5ea;
+padding:12px;
+margin-bottom:12px;
+}
+
+input{
+width:100%;
+padding:14px;
+border:none;
+outline:none;
+font-size:15px;
+}
+
+.value{
+padding:14px;
+font-size:15px;
+word-break:break-all;
+}
+
+.row{
+padding:14px;
+display:flex;
+justify-content:space-between;
+cursor:pointer;
+}
+
+.row .check{display:none;color:#0a84ff;}
+.row.active .check{display:block;}
+
+.divider{height:1px;background:#e5e5ea;}
+
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:14px;
+font-size:15px;
+cursor:pointer;
+margin-top:10px;
+}
+
+.pay{
+background:#34c759;
+color:#fff;
+font-weight:600;
+}
+</style>
+</head>
+
+<body>
+
+<div class="screen">
+
+<h2>iPhone IMEI Check</h2>
+<div class="sub">Only for Apple devices</div>
+
+<div class="block" id="imeiBlock">
+<input id="imeiInput" placeholder="Enter IMEI">
+<button onclick="setIMEI()">Continue</button>
+</div>
+
+<div id="typeBlock"></div>
+<div id="emailBlock"></div>
+<div id="payBlock"></div>
+
+</div>
+
+<script>
+
+/////////////////////////////////////
+// 🔥 FIXED API (ВАЖНО)
+/////////////////////////////////////
+const API_URL = "https://imei-info.onrender.com";
+
+let imei = "";
+let type = "";
+
+/////////////////////////////////////
+// IMEI
+/////////////////////////////////////
+function setIMEI(){
+
+imei = document.getElementById("imeiInput").value.trim();
+
+if(!imei){
+ alert("Enter IMEI");
+ return;
+}
+
+document.getElementById("imeiBlock").innerHTML = `
+ <div class="value">IMEI: <b>${imei}</b></div>
+`;
+
+showType();
+}
+
+/////////////////////////////////////
+// TYPE
+/////////////////////////////////////
+function showType(){
+
+document.getElementById("typeBlock").innerHTML = `
+<div class="block">
+
+<div class="row" onclick="setType(this,'carrier')">
+Carrier status <span class="check">✓</span>
+</div>
+
+<div class="divider"></div>
+
+<div class="row" onclick="setType(this,'findmy')">
+Find My iPhone <span class="check">✓</span>
+</div>
+
+<div class="divider"></div>
+
+<div class="row" onclick="setType(this,'blacklist')">
+Blacklist check <span class="check">✓</span>
+</div>
+
+</div>
+`;
+}
+
+/////////////////////////////////////
+// SELECT TYPE
+/////////////////////////////////////
+function setType(el,t){
+
+type = t;
+
+document.querySelectorAll(".row").forEach(e=>{
+ e.classList.remove("active");
+});
+
+el.classList.add("active");
+
+showEmail();
+}
+
+/////////////////////////////////////
+// EMAIL
+/////////////////////////////////////
+function showEmail(){
+
+document.getElementById("emailBlock").innerHTML = `
+<div class="block">
+<input id="email" placeholder="Enter email">
+<button onclick="showPay()">Continue</button>
+</div>
+`;
+}
+
+/////////////////////////////////////
+// PAY BUTTON
+/////////////////////////////////////
+function showPay(){
+
+document.getElementById("payBlock").innerHTML = `
+<button class="pay" onclick="payToCheck()">
+Pay $1.99
+</button>
+`;
+}
+
+/////////////////////////////////////
+// PAYMENT
+/////////////////////////////////////
+async function payToCheck(){
+
+const email = document.getElementById("email").value.trim();
+
+if(!imei || !type || !email){
+ alert("Fill all fields");
+ return;
+}
+
+try{
+
+const res = await fetch(API_URL + "/create-payment", {
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body: JSON.stringify({
+   deviceId: imei,
+   email: email,
+   type: type
+ })
+});
+
+const data = await res.json();
+
+if(data && data.url){
+ window.location.href = data.url;
+} else {
+ alert("Payment error");
+ console.log(data);
+}
+
+}catch(e){
+ alert("Server error");
+ console.log(e);
+}
+
+}
+
+</script>
+
+</body>
+</html>
