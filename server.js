@@ -26,16 +26,11 @@ app.use(cookieParser());
 WEBHOOK ROUTE (RAW JSON)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-
   try {
-    // Если ты тестируешь локально или без подписи, парсим JSON напрямую
-    // В продакшене лучше использовать stripe.webhooks.constructEvent
     const event = JSON.parse(req.body.toString());
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-
       const deviceId = session.metadata?.deviceId;
       const email = session.metadata?.email;
       const type = session.metadata?.type;
@@ -55,13 +50,10 @@ app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (re
           },
           { upsert: true }
         );
-
         console.log("💰 PAYMENT SAVED:", deviceId);
       }
     }
-
     res.json({ received: true });
-
   } catch (err) {
     console.log("WEBHOOK ERROR:", err.message);
     res.status(400).send("Webhook error");
@@ -77,12 +69,11 @@ app.use(express.urlencoded({ extended: true }));
 /* =========================
 MONGODB & SERVER START
 ========================= */
-let Check; // Объявляем модель глобально для роутов
+let Check;
 
 async function start() {
   try {
     console.log("🔥 STARTING SERVER...");
-
     await mongoose.connect(process.env.MONGO_URL);
     console.log("MongoDB connected");
 
@@ -98,7 +89,6 @@ async function start() {
       paid: { type: Boolean, default: false },
       time: { type: Date, default: Date.now }
     });
-
     Check = mongoose.model("Check", CheckSchema);
 
     /* =========================
@@ -107,9 +97,7 @@ async function start() {
     function isValidDeviceId(deviceId) {
       if (!deviceId) return false;
       deviceId = deviceId.trim();
-
-      return /^\d{15}$/.test(deviceId) ||
-             /^[A-Za-z0-9]{10,12}$/.test(deviceId);
+      return /^\d{15}$/.test(deviceId) || /^[A-Za-z0-9]{10,12}$/.test(deviceId);
     }
 
     /* =========================
@@ -118,16 +106,10 @@ async function start() {
     app.post("/create-payment", async (req, res) => {
       try {
         const { deviceId, email, type } = req.body;
-
         if (!isValidDeviceId(deviceId)) {
           return res.status(400).json({ error: "Invalid ID" });
         }
-
-        await Check.updateOne(
-          { deviceId },
-          { $set: { email, type } },
-          { upsert: true }
-        );
+        await Check.updateOne({ deviceId }, { $set: { email, type } }, { upsert: true });
 
         const session = await stripe.checkout.sessions.create({
           payment_method_types: ["card"],
@@ -135,9 +117,7 @@ async function start() {
           line_items: [{
             price_data: {
               currency: "usd",
-              product_data: {
-                name: `IMEI Check (${type || "carrier"})`
-              },
+              product_data: { name: `IMEI Check (${type || "carrier"})` },
               unit_amount: 199
             },
             quantity: 1
@@ -146,21 +126,23 @@ async function start() {
           success_url: "https://imei-info.pages.dev",
           cancel_url: "https://imei-info.pages.dev"
         });
-
         res.json({ url: session.url });
-
       } catch (err) {
         res.status(500).json({ error: err.message });
       }
     });
 
     /* =========================
-    ADMIN PANEL
+    ADMIN PANEL (С ПАРОЛЕМ)
     ========================= */
     app.get("/admin", async (req, res) => {
+      // Проверяем, совпадает ли пароль из адресной строки с паролем из .env
+      if (req.query.pass !== process.env.ADMIN_PASSWORD) {
+        return res.status(403).send("<h1>🚫 Доступ запрещен! Неверный пароль.</h1>");
+      }
+
       try {
         const data = await Check.find().sort({ time: -1 });
-
         const rows = data.map(d => `
           <tr>
             <td>${d.deviceId}</td>
@@ -199,7 +181,6 @@ async function start() {
           </body>
           </html>
         `);
-
       } catch (err) {
         res.status(500).send(err.message);
       }
@@ -209,11 +190,9 @@ async function start() {
     START SERVER
     ========================= */
     const PORT = process.env.PORT || 3000;
-
     const server = app.listen(PORT, "0.0.0.0", () => {
       console.log("🔥 SERVER LISTENING ON", PORT);
     });
-
     server.on("error", (err) => {
       console.log("💥 SERVER ERROR:", err);
     });
