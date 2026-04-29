@@ -132,8 +132,7 @@ font-weight:600;
 
 <script>
 
-// ✅ ВОТ СЮДА Я ВСТАВИЛ ТВОЙ НОВЫЙ IP-АДРЕС
-const API_URL = "http://130.61.122.182:3000";
+const API_URL = "https://imei-info.onrender.com";
 
 let imei = "";
 let type = "";
@@ -144,14 +143,14 @@ function setIMEI(){
 imei = document.getElementById("imeiInput").value.trim();
 
 if(!imei){
-alert("Enter IMEI");
-return;
+ alert("Enter IMEI");
+ return;
 }
 
 document.getElementById("imeiBlock").innerHTML = `
-<div class="value">
-  IMEI: <b>${imei}</b>
-</div>
+ <div class="value">
+   IMEI: <b>${imei}</b>
+ </div>
 `;
 
 showType();
@@ -161,25 +160,25 @@ showType();
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
-<div class="block">
+ <div class="block">
 
-  <div class="row" onclick="setType(this,'carrier')">
-    Carrier status <span class="check">✓</span>
-  </div>
+   <div class="row" onclick="setType(this,'carrier')">
+     Carrier status <span class="check">✓</span>
+   </div>
 
-  <div class="divider"></div>
+   <div class="divider"></div>
 
-  <div class="row" onclick="setType(this,'findmy')">
-    Find My iPhone <span class="check">✓</span>
-  </div>
+   <div class="row" onclick="setType(this,'findmy')">
+     Find My iPhone <span class="check">✓</span>
+   </div>
 
-  <div class="divider"></div>
+   <div class="divider"></div>
 
-  <div class="row" onclick="setType(this,'blacklist')">
-    Blacklist check <span class="check">✓</span>
-  </div>
+   <div class="row" onclick="setType(this,'blacklist')">
+     Blacklist check <span class="check">✓</span>
+   </div>
 
-</div>
+ </div>
 `;
 }
 
@@ -189,7 +188,7 @@ function setType(el,t){
 type = t;
 
 document.querySelectorAll(".row").forEach(e=>{
-e.classList.remove("active");
+ e.classList.remove("active");
 });
 
 el.classList.add("active");
@@ -203,9 +202,9 @@ function showEmail(){
 if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
-<div class="block">
-  <input id="email" placeholder="Enter email">
-</div>
+ <div class="block">
+   <input id="email" placeholder="Enter email">
+ </div>
 `;
 
 showPay();
@@ -217,9 +216,9 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">
-  Pay to Check $1.99
-</button>
+ <button class="pay" onclick="payToCheck()">
+   Pay to Check $1.99
+ </button>
 `;
 }
 
@@ -229,36 +228,36 @@ async function payToCheck(){
 const email = document.getElementById("email").value.trim();
 
 if(!imei){
-alert("Enter IMEI");
-return;
+ alert("Enter IMEI");
+ return;
 }
 
 if(!email){
-alert("Enter email");
-return;
+ alert("Enter email");
+ return;
 }
 
 if(!type){
-alert("Select type");
-return;
+ alert("Select type");
+ return;
 }
 
 const res = await fetch(API_URL + "/create-payment", {
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body: JSON.stringify({
-  deviceId: imei,
-  email: email,
-  type: type
-})
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body: JSON.stringify({
+   deviceId: imei,
+   email: email,
+   type: type
+ })
 });
 
 const data = await res.json();
 
 if(data.url){
-window.location.href = data.url;
+ window.location.href = data.url;
 } else {
-alert("Payment error");
+ alert("Payment error");
 }
 }
 
