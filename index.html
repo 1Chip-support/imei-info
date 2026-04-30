@@ -124,12 +124,6 @@ color:white;
 font-weight:600;
 }
 
-/* 增加禁用状态样式 */
-button:disabled {
-  background: #ccc !important;
-  cursor: not-allowed;
-}
-
 .error{
 background:#ff3b30;
 color:#fff;
@@ -156,7 +150,7 @@ color:#8e8e93;
 <img src="images/logo.jpeg" alt="logo">
 </div>
 
-h2>IMEI Check</h2>
+<h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
@@ -172,7 +166,10 @@ h2>IMEI Check</h2>
 
 <script>
 
-const API_URL = "http://130.61.122.182:3000"; // ✅ FIXED
+// ⚠️ 重要：因为你的网站是 https，这里的 API 必须也是 https。
+// 如果你的服务器没有 SSL 证书，请求会被浏览器拦截。
+// 建议配置 Nginx 反向代理或使用 Cloudflare 代理你的 IP 以启用 HTTPS。
+const API_URL = "https://130.61.122.182:3000"; // 尝试改为 https，如果失败请检查服务器配置
 
 let imei = "";
 let type = "";
@@ -263,55 +260,60 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
-<button id="payBtn" class="pay" onclick="payToCheck()">
+<button class="pay" onclick="payToCheck(this)">
  Pay to Check $1.99
 </button>
 `;
 }
 
-async function payToCheck(){
+async function payToCheck(btn){
 
 const email = document.getElementById("email").value.trim();
-const payBtn = document.getElementById("payBtn");
 
 if(!imei || !type || !email){
 alert("Fill all fields");
 return;
 }
 
-// 防止重复点击
-payBtn.disabled = true;
-payBtn.innerText = "Processing...";
+// 按钮防抖处理
+const originalText = btn.innerText;
+btn.innerText = "Processing...";
+btn.disabled = true;
+btn.style.opacity = "0.6";
 
 try {
-  const res = await fetch(API_URL + "/create-payment", {
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body: JSON.stringify({
-   deviceId: imei,
-   email: email,
-   type: type
-  })
-  });
+const res = await fetch(API_URL + "/create-payment", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({
+ deviceId: imei,
+ email: email,
+ type: type
+})
+});
 
-  const data = await res.json();
-
-  if(data.url){
-    window.location.href = data.url;
-  } else {
-    alert("Payment error: No URL returned");
-    // 恢复按钮状态
-    payBtn.disabled = false;
-    payBtn.innerText = "Pay to Check $1.99";
-  }
-} catch (error) {
-  console.error("Payment error:", error);
-  alert("Payment request failed. Please check your network or try again later.");
-  // 恢复按钮状态
-  payBtn.disabled = false;
-  payBtn.innerText = "Pay to Check $1.99";
+// 检查网络响应是否成功
+if (!res.ok) {
+    throw new Error(`Server Error: ${res.status}`);
 }
 
+const data = await res.json();
+
+if(data.url){
+window.location.href = data.url;
+} else {
+throw new Error("No payment URL received");
+}
+
+} catch (err) {
+console.error(err);
+// 这里会捕获网络错误或跨域错误
+alert("Payment request failed. \n\nDetails: " + err.message + "\n\nThis is often caused by network issues or the server being down.");
+// 恢复按钮状态
+btn.innerText = originalText;
+btn.disabled = false;
+btn.style.opacity = "1";
+}
 }
 
 </script>
