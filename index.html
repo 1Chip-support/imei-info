@@ -168,7 +168,7 @@ color:#8e8e93;
 
 // 自动获取当前网站的域名，并匹配 http 或 https
 // 这样就不会出现混合内容拦截的问题了
-const API_URL = window.location.origin; 
+const API_URL = window.location.origin;
 
 let imei = "";
 let type = "";
@@ -183,11 +183,11 @@ const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
 <div class="error">
-  ❌ Invalid IMEI / SN
+ ❌ Invalid IMEI / SN
 
-  IMEI = 15 digits
+ IMEI = 15 digits
 
-  SN = 10-12 letters/numbers
+ SN = 10-12 letters/numbers
 </div>
 <input id="imeiInput" placeholder="Enter IMEI or SN">
 <button onclick="setIMEI()">Continue</button>
@@ -202,7 +202,7 @@ document.getElementById("imeiBlock").innerHTML = `
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML = `
 <div class="value">
-  ID: <b>${imei}</b>
+ ID: <b>${imei}</b>
 </div>
 `;
 showType();
@@ -215,15 +215,15 @@ document.getElementById("typeBlock").innerHTML = `
 <div class="block">
 
 <div class="row" onclick="setType(this,'carrier')">
-  Carrier status
+ Carrier status
 </div>
 
 <div class="row" onclick="setType(this,'findmy')">
-  Find My iPhone
+ Find My iPhone
 </div>
 
 <div class="row" onclick="setType(this,'blacklist')">
-  Blacklist check
+ Blacklist check
 </div>
 
 </div>
@@ -300,8 +300,8 @@ type: type
 
 // 检查网络响应是否成功
 if (!res.ok) {
-   const errorText = await res.text();
-   throw new Error(`Server Error: ${res.status} - ${errorText}`);
+  const errorText = await res.text();
+  throw new Error(`Server Error: ${res.status} - ${errorText}`);
 }
 
 const data = await res.json();
@@ -318,7 +318,10 @@ console.error(err);
 const errorDiv = document.createElement("div");
 errorDiv.id = "api-error";
 errorDiv.className = "error";
-errorDiv.innerHTML = `❌ Payment request failed: ${err.message}  Please check your server logs or network connection.`;
+errorDiv.innerHTML = `❌ Payment request failed:
+${err.message}
+
+Please check your server logs or network connection.`;
 document.getElementById("payBlock").prepend(errorDiv);
 
 // 恢复按钮状态
