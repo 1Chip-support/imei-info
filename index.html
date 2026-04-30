@@ -166,129 +166,128 @@ color:#8e8e93;
 
 <script>
 
-const API_URL = "http://130.61.122.182:3000"; // ✅ FIXED
+// ВАЖНО: Используем HTTPS и убираем порт 3000, так как Nginx перенаправит запрос куда нужно
+const API_URL = "https://130.61.122.182"; 
 
 let imei = "";
 let type = "";
 
 function setIMEI(){
+    imei = document.getElementById("imeiInput").value.trim();
+    const isIMEI = /^\d{15}$/.test(imei);
+    const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
-imei = document.getElementById("imeiInput").value.trim();
+    if(!isIMEI && !isSN){
+        document.getElementById("imeiBlock").innerHTML = `
+         <div class="error">
+           ❌ Invalid IMEI / SN 
+           IMEI = 15 digits 
+           SN = 10-12 letters/numbers
+         </div>
+         <input id="imeiInput" placeholder="Enter IMEI or SN">
+         <button onclick="setIMEI()">Continue</button>
+        `;
+        return;
+    }
 
-const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
+    document.getElementById("imeiBlock").innerHTML = `
+    <div class="loading">Checking device...</div>
+    `;
 
-if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML = `
-  <div class="error">
-    ❌ Invalid IMEI / SN<br>
-    IMEI = 15 digits<br>
-    SN = 10-12 letters/numbers
-  </div>
-  <input id="imeiInput" placeholder="Enter IMEI or SN">
-  <button onclick="setIMEI()">Continue</button>
-`;
-return;
-}
-
-document.getElementById("imeiBlock").innerHTML = `
-<div class="loading">Checking device...</div>
-`;
-
-setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML = `
-  <div class="value">
-    ID: <b>${imei}</b>
-  </div>
-`;
-showType();
-}, 1200);
+    // Имитация задержки проверки
+    setTimeout(()=>{
+        document.getElementById("imeiBlock").innerHTML = `
+         <div class="value">
+           ID: <b>${imei}</b>
+         </div>
+        `;
+        showType();
+    }, 1200);
 }
 
 function showType(){
+    document.getElementById("typeBlock").innerHTML = `
+    <div class="block">
 
-document.getElementById("typeBlock").innerHTML = `
-<div class="block">
+     <div class="row" onclick="setType(this,'carrier')">
+       Carrier status
+     </div>
 
-  <div class="row" onclick="setType(this,'carrier')">
-    Carrier status
-  </div>
+     <div class="row" onclick="setType(this,'findmy')">
+       Find My iPhone
+     </div>
 
-  <div class="row" onclick="setType(this,'findmy')">
-    Find My iPhone
-  </div>
+     <div class="row" onclick="setType(this,'blacklist')">
+       Blacklist check
+     </div>
 
-  <div class="row" onclick="setType(this,'blacklist')">
-    Blacklist check
-  </div>
-
-</div>
-`;
+    </div>
+    `;
 }
 
 function setType(el,t){
-
-type = t;
-
-document.querySelectorAll(".row").forEach(e=>{
-e.classList.remove("active");
-});
-
-el.classList.add("active");
-
-showEmail();
+    type = t;
+    document.querySelectorAll(".row").forEach(e=>{
+        e.classList.remove("active");
+    });
+    el.classList.add("active");
+    showEmail();
 }
 
 function showEmail(){
-
-if(document.getElementById("emailBlock").innerHTML) return;
-
-document.getElementById("emailBlock").innerHTML = `
-<div class="block">
-  <input id="email" placeholder="Enter email">
-</div>
-`;
-
-showPay();
+    if(document.getElementById("emailBlock").innerHTML) return;
+    document.getElementById("emailBlock").innerHTML = `
+    <div class="block">
+     <input id="email" placeholder="Enter email">
+    </div>
+    `;
+    showPay();
 }
 
 function showPay(){
-
-if(document.getElementById("payBlock").innerHTML) return;
-
-document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">
-  Pay to Check $1.99
-</button>
-`;
+    if(document.getElementById("payBlock").innerHTML) return;
+    document.getElementById("payBlock").innerHTML = `
+    <button class="pay" onclick="payToCheck()">
+     Pay to Check $1.99
+    </button>
+    `;
 }
 
 async function payToCheck(){
+    const email = document.getElementById("email").value.trim();
 
-const email = document.getElementById("email").value.trim();
+    if(!imei || !type || !email){
+        alert("Fill all fields");
+        return;
+    }
 
-if(!imei || !type || !email){
-alert("Fill all fields");
-return;
-}
+    try {
+        const res = await fetch(API_URL + "/create-payment", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({
+             deviceId: imei,
+             email: email,
+             type: type
+            })
+        });
 
-const res = await fetch(API_URL + "/create-payment", {
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body: JSON.stringify({
-  deviceId: imei,
-  email: email,
-  type: type
-})
-});
+        // Проверка на ошибки сети
+        if (!res.ok) {
+            throw new Error("Network response was not ok");
+        }
 
-const data = await res.json();
+        const data = await res.json();
 
-if(data.url){
-window.location.href = data.url;
-} else {
-alert("Payment error");
-}
+        if(data.url){
+            window.location.href = data.url;
+        } else {
+            alert("Payment error: No URL received");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Connection error. Check console.");
+    }
 }
 
 </script>
