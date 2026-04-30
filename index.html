@@ -89,6 +89,12 @@ font-size:15px;
 word-break:break-all;
 }
 
+.label{
+font-size:12px;
+color:#8e8e93;
+margin-top:5px;
+}
+
 .row{
 padding:14px;
 cursor:pointer;
@@ -170,21 +176,26 @@ const API_URL = "https://imei-info.onrender.com";
 
 let imei = "";
 let type = "";
+let detectedType = "";
 
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-// IMEI or SN validation
+// ✅ FIXED VALIDATION
 const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
-if(!isIMEI && !isSN){
+// SN must contain at least 1 letter
+const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
+
+if(isIMEI) detectedType = "IMEI";
+else if(isSN) detectedType = "SN";
+else{
 document.getElementById("imeiBlock").innerHTML = `
   <div class="error">
     ❌ Invalid IMEI / SN<br>
     IMEI = 15 digits<br>
-    SN = 10-12 letters/numbers
+    SN = 10-12 letters/numbers (must contain letters)
   </div>
   <input id="imeiInput" placeholder="Enter IMEI or SN">
   <button onclick="setIMEI()">Continue</button>
@@ -199,7 +210,8 @@ document.getElementById("imeiBlock").innerHTML = `
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML = `
   <div class="value">
-    ID: <b>${imei}</b>
+    ${detectedType}: <b>${imei}</b>
+    <div class="label">${detectedType} detected</div>
   </div>
 `;
 showType();
