@@ -160,7 +160,7 @@ color:#8e8e93;
 <div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI or SN">
+<input id="imeiInput" placeholder="IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
@@ -192,13 +192,13 @@ if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
 else{
 document.getElementById("imeiBlock").innerHTML = `
-  <div class="error">
-    ❌ Invalid IMEI / SN<br>
-    IMEI = 15 digits<br>
-    SN = 10-12 letters/numbers (must contain letters)
-  </div>
-  <input id="imeiInput" placeholder="Enter IMEI or SN">
-  <button onclick="setIMEI()">Continue</button>
+ <div class="error">
+   ❌ Invalid IMEI / SN<br>
+   IMEI = 15 digits<br>
+   SN = 10-12 letters/numbers (must contain letters)
+ </div>
+ <input id="imeiInput" placeholder="IMEI/SN">
+ <button onclick="setIMEI()">Continue</button>
 `;
 return;
 }
@@ -209,10 +209,10 @@ document.getElementById("imeiBlock").innerHTML = `
 
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML = `
-  <div class="value">
-    ${detectedType}: <b>${imei}</b>
-    <div class="label">${detectedType} detected</div>
-  </div>
+ <div class="value">
+   ${detectedType}: <b>${imei}</b>
+   <div class="label">${detectedType} detected</div>
+ </div>
 `;
 showType();
 }, 1200);
@@ -223,17 +223,17 @@ function showType(){
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
 
-  <div class="row" onclick="setType(this,'carrier')">
-    Carrier status
-  </div>
+ <div class="row" onclick="setType(this,'carrier')">
+   Carrier status
+ </div>
 
-  <div class="row" onclick="setType(this,'findmy')">
-    Find My iPhone
-  </div>
+ <div class="row" onclick="setType(this,'findmy')">
+   Find My iPhone
+ </div>
 
-  <div class="row" onclick="setType(this,'blacklist')">
-    Blacklist check
-  </div>
+ <div class="row" onclick="setType(this,'blacklist')">
+   Blacklist check
+ </div>
 
 </div>
 `;
@@ -258,7 +258,7 @@ if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
 <div class="block">
-  <input id="email" placeholder="Enter email">
+ <input id="email" placeholder="Enter email">
 </div>
 `;
 
@@ -271,7 +271,7 @@ if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
 <button class="pay" onclick="payToCheck()">
-  Pay to Check $1.99
+ Pay to Check $1.99
 </button>
 `;
 }
@@ -289,9 +289,9 @@ const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body: JSON.stringify({
-  deviceId: imei,
-  email: email,
-  type: type
+ deviceId: imei,
+ email: email,
+ type: type
 })
 });
 
