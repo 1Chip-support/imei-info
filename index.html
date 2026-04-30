@@ -166,129 +166,152 @@ color:#8e8e93;
 
 <script>
 
-// ИСПРАВЛЕНО: Используем https и стандартный порт (443). Nginx сам перенаправит на 3000.
-const API_URL = "https://130.61.122.182";
+/* =========================
+API FALLBACK (HTTPS → HTTP)
+========================= */
+let API_URL = "https://130.61.122.182:3000";
+
+async function checkAPI(){
+try{
+  const res = await fetch(API_URL + "/check", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({deviceId:"test"})
+  });
+
+  if(!res.ok) throw new Error();
+}catch(e){
+  console.log("HTTPS failed → switching to HTTP");
+  API_URL = "http://130.61.122.182:3000";
+}
+}
+
+checkAPI();
+
+/* =========================
+APP LOGIC
+========================= */
 
 let imei = "";
 let type = "";
 
 function setIMEI(){
-   imei = document.getElementById("imeiInput").value.trim();
-   const isIMEI = /^\d{15}$/.test(imei);
-   const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
-   if(!isIMEI && !isSN){
-       document.getElementById("imeiBlock").innerHTML = `
-        <div class="error">
-          ❌ Invalid IMEI / SN
+imei = document.getElementById("imeiInput").value.trim();
 
-          IMEI = 15 digits
+const isIMEI = /^\d{15}$/.test(imei);
+const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
-          SN = 10-12 letters/numbers
-        </div>
-        <input id="imeiInput" placeholder="Enter IMEI or SN">
-        <button onclick="setIMEI()">Continue</button>
-       `;
-       return;
-   }
+if(!isIMEI && !isSN){
+document.getElementById("imeiBlock").innerHTML = `
+<div class="error">
+❌ Invalid IMEI / SN
+IMEI = 15 digits
+SN = 10-12 letters/numbers
+</div>
+<input id="imeiInput" placeholder="Enter IMEI or SN">
+<button onclick="setIMEI()">Continue</button>
+`;
+return;
+}
 
-   document.getElementById("imeiBlock").innerHTML = `
-   <div class="loading">Checking device...</div>
-   `;
+document.getElementById("imeiBlock").innerHTML =
+`<div class="loading">Checking device...</div>`;
 
-   // Имитация задержки проверки
-   setTimeout(()=>{
-       document.getElementById("imeiBlock").innerHTML = `
-        <div class="value">
-          ID: <b>${imei}</b>
-        </div>
-       `;
-       showType();
-   }, 1200);
+setTimeout(()=>{
+document.getElementById("imeiBlock").innerHTML =
+`<div class="value">ID: <b>${imei}</b></div>`;
+showType();
+},1200);
+
 }
 
 function showType(){
-   document.getElementById("typeBlock").innerHTML = `
-   <div class="block">
 
-    <div class="row" onclick="setType(this,'carrier')">
-      Carrier status
-    </div>
-
-    <div class="row" onclick="setType(this,'findmy')">
-      Find My iPhone
-    </div>
-
-    <div class="row" onclick="setType(this,'blacklist')">
-      Blacklist check
-    </div>
-
-   </div>
-   `;
+document.getElementById("typeBlock").innerHTML = `
+<div class="block">
+<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
+<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
+<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
+</div>
+`;
 }
 
 function setType(el,t){
-   type = t;
-   document.querySelectorAll(".row").forEach(e=>{
-       e.classList.remove("active");
-   });
-   el.classList.add("active");
-   showEmail();
+
+type = t;
+
+document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
+el.classList.add("active");
+
+showEmail();
 }
 
 function showEmail(){
-   if(document.getElementById("emailBlock").innerHTML) return;
-   document.getElementById("emailBlock").innerHTML = `
-   <div class="block">
-    <input id="email" placeholder="Enter email">
-   </div>
-   `;
-   showPay();
+
+if(document.getElementById("emailBlock").innerHTML) return;
+
+document.getElementById("emailBlock").innerHTML = `
+<div class="block">
+<input id="email" placeholder="Enter email">
+</div>
+`;
+
+showPay();
 }
 
 function showPay(){
-   if(document.getElementById("payBlock").innerHTML) return;
-   document.getElementById("payBlock").innerHTML = `
-   <button class="pay" onclick="payToCheck()">
-    Pay to Check $1.99
-   </button>
-   `;
+
+if(document.getElementById("payBlock").innerHTML) return;
+
+document.getElementById("payBlock").innerHTML = `
+<button class="pay" onclick="payToCheck(this)">
+Pay to Check $1.99
+</button>
+`;
 }
 
-async function payToCheck(){
-   const email = document.getElementById("email").value.trim();
+async function payToCheck(btn){
 
-   if(!imei || !type || !email){
-       alert("Fill all fields");
-       return;
-   }
+const email = document.getElementById("email").value.trim();
 
-   try {
-       const res = await fetch(API_URL + "/create-payment", {
-           method:"POST",
-           headers:{"Content-Type":"application/json"},
-           body: JSON.stringify({
-            deviceId: imei,
-            email: email,
-            type: type
-           })
-       });
+if(!imei || !type || !email){
+alert("Fill all fields");
+return;
+}
 
-       if (!res.ok) {
-           throw new Error("Network response was not ok");
-       }
+const old = btn.innerText;
+btn.innerText = "Processing...";
+btn.disabled = true;
 
-       const data = await res.json();
+try{
 
-       if(data.url){
-           window.location.href = data.url;
-       } else {
-           alert("Payment error: No URL received");
-       }
-   } catch (error) {
-       console.error("Error:", error);
-       alert("Connection error. Check console.");
-   }
+const res = await fetch(API_URL + "/create-payment", {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({
+deviceId: imei,
+email,
+type
+})
+});
+
+if(!res.ok) throw new Error("Server error " + res.status);
+
+const data = await res.json();
+
+if(data.url){
+window.location.href = data.url;
+}else{
+throw new Error("No payment URL");
+}
+
+}catch(err){
+alert("Payment failed:\n" + err.message);
+btn.innerText = old;
+btn.disabled = false;
+}
+
 }
 
 </script>
