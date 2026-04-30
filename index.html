@@ -160,7 +160,7 @@ color:#8e8e93;
 <div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
@@ -182,10 +182,7 @@ function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
-// ✅ FIXED VALIDATION
 const isIMEI = /^\d{15}$/.test(imei);
-
-// SN must contain at least 1 letter
 const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(isIMEI) detectedType = "IMEI";
@@ -197,7 +194,7 @@ document.getElementById("imeiBlock").innerHTML = `
    IMEI = 15 digits<br>
    SN = 10-12 letters/numbers (must contain letters)
  </div>
- <input id="imeiInput" placeholder="IMEI/SN">
+ <input id="imeiInput" placeholder="Enter IMEI/SN">
  <button onclick="setIMEI()">Continue</button>
 `;
 return;
