@@ -11,40 +11,40 @@ WEBHOOK (MUST BE FIRST)
 ========================= */
 app.post("/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
 try {
- const event = JSON.parse(req.body.toString());
+  const event = JSON.parse(req.body.toString());
 
- if (event.type === "checkout.session.completed") {
-   const session = event.data.object;
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
 
-   const deviceId = session.metadata?.deviceId;
-   const email = session.metadata?.email;
-   const type = session.metadata?.type;
+    const deviceId = session.metadata?.deviceId;
+    const email = session.metadata?.email;
+    const type = session.metadata?.type;
 
-   if (deviceId) {
-     await Check.updateOne(
-       { deviceId },
-       {
-         $set: {
-           deviceId,
-           email,
-           type,
-           paid: true,
-           status: "paid",
-           time: new Date()
-         }
-       },
-       { upsert: true }
-     );
+    if (deviceId) {
+      await Check.updateOne(
+        { deviceId },
+        {
+          $set: {
+            deviceId,
+            email,
+            type,
+            paid: true,
+            status: "paid",
+            time: new Date()
+          }
+        },
+        { upsert: true }
+      );
 
-     console.log("💰 PAYMENT SAVED:", deviceId);
-   }
- }
+      console.log("💰 PAYMENT SAVED:", deviceId);
+    }
+  }
 
- res.json({ received: true });
+  res.json({ received: true });
 
 } catch (err) {
- console.log("WEBHOOK ERROR:", err.message);
- res.status(400).send("Webhook error");
+  console.log("WEBHOOK ERROR:", err.message);
+  res.status(400).send("Webhook error");
 }
 });
 
@@ -79,7 +79,7 @@ time: { type: Date, default: Date.now }
 const Check = mongoose.model("Check", CheckSchema);
 
 /* =========================
-VALIDATION (IMEI / SN)
+VALIDATION
 ========================= */
 function isValidDeviceId(deviceId) {
 if (!deviceId) return false;
@@ -97,40 +97,40 @@ CREATE PAYMENT
 ========================= */
 app.post("/create-payment", async (req, res) => {
 try {
- const { deviceId, email, type } = req.body;
+  const { deviceId, email, type } = req.body;
 
- if (!isValidDeviceId(deviceId)) {
-   return res.status(400).json({ error: "Invalid IMEI / SN (10–12 chars)" });
- }
+  if (!isValidDeviceId(deviceId)) {
+    return res.status(400).json({ error: "Invalid IMEI / SN" });
+  }
 
- await Check.updateOne(
-   { deviceId },
-   { $set: { email, type } },
-   { upsert: true }
- );
+  await Check.updateOne(
+    { deviceId },
+    { $set: { email, type } },
+    { upsert: true }
+  );
 
- const session = await stripe.checkout.sessions.create({
-   payment_method_types: ["card"],
-   mode: "payment",
-   line_items: [{
-     price_data: {
-       currency: "usd",
-       product_data: {
-         name: `IMEI/SN Check (${type || "carrier"})`
-       },
-       unit_amount: 199
-     },
-     quantity: 1
-   }],
-   metadata: { deviceId, email, type },
-   success_url: "https://imei-info.pages.dev",
-   cancel_url: "https://imei-info.pages.dev"
- });
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: `IMEI/SN Check (${type || "carrier"})`
+        },
+        unit_amount: 199
+      },
+      quantity: 1
+    }],
+    metadata: { deviceId, email, type },
+    success_url: "https://imei-info.pages.dev",
+    cancel_url: "https://imei-info.pages.dev"
+  });
 
- res.json({ url: session.url });
+  res.json({ url: session.url });
 
 } catch (err) {
- res.status(500).json({ error: err.message });
+  res.status(500).json({ error: err.message });
 }
 });
 
@@ -139,22 +139,22 @@ CHECK
 ========================= */
 app.post("/check", async (req, res) => {
 try {
- const { deviceId } = req.body;
+  const { deviceId } = req.body;
 
- if (!isValidDeviceId(deviceId)) {
-   return res.status(400).json({ status: "invalid_id" });
- }
+  if (!isValidDeviceId(deviceId)) {
+    return res.status(400).json({ status: "invalid_id" });
+  }
 
- const payment = await Check.findOne({ deviceId });
+  const payment = await Check.findOne({ deviceId });
 
- if (!payment || payment.paid !== true) {
-   return res.status(403).json({ status: "payment_required" });
- }
+  if (!payment || payment.paid !== true) {
+    return res.status(403).json({ status: "payment_required" });
+  }
 
- res.json(payment);
+  res.json(payment);
 
 } catch (err) {
- res.status(500).json({ status: "server_error" });
+  res.status(500).json({ status: "server_error" });
 }
 });
 
@@ -167,7 +167,7 @@ res.redirect("/admin");
 });
 
 /* =========================
-ADMIN PANEL (PAID / UNPAID)
+ADMIN PANEL
 ========================= */
 app.get("/admin", async (req, res) => {
 
@@ -196,8 +196,22 @@ border-radius:14px;
 border:1px solid #e5e5ea;
 }
 
-.copy{color:#0071e3;cursor:pointer;}
-.delete{color:#ff3b30;text-decoration:none;}
+.btn{
+display:inline-block;
+padding:7px 10px;
+border-radius:8px;
+background:#0071e3;
+color:#fff;
+cursor:pointer;
+font-size:13px;
+margin-top:8px;
+}
+
+.delete{
+color:#ff3b30;
+text-decoration:none;
+margin-left:10px;
+}
 
 h3{margin:20px 0 10px;}
 </style>
@@ -214,20 +228,14 @@ h3{margin:20px 0 10px;}
 ${paid.map(i => `
 <div class="card">
 
-<div>
-<b>ID:</b>
-<span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span>
-</div>
-
-<div>
-<b>Email:</b>
-<span class="copy" onclick="copyText('${String(i.email || "").replace(/'/g,"")}')">
-${i.email || "-"}
-</span>
-</div>
-
+<div><b>ID:</b> ${i.deviceId}</div>
+<div><b>Email:</b> ${i.email || "-"}</div>
 <div><b>Type:</b> ${i.type}</div>
 <div><b>Status:</b> PAID</div>
+
+<div class="btn" onclick="copyAll('${i.deviceId}','${(i.email||"").replace(/'/g,"")}')">
+Copy IMEI + Email
+</div>
 
 <a class="delete" href="/admin/delete/${i._id}">Delete</a>
 
@@ -239,20 +247,14 @@ ${i.email || "-"}
 ${unpaid.map(i => `
 <div class="card">
 
-<div>
-<b>ID:</b>
-<span class="copy" onclick="copyText('${i.deviceId}')">${i.deviceId}</span>
-</div>
-
-<div>
-<b>Email:</b>
-<span class="copy" onclick="copyText('${String(i.email || "").replace(/'/g,"")}')">
-${i.email || "-"}
-</span>
-</div>
-
+<div><b>ID:</b> ${i.deviceId}</div>
+<div><b>Email:</b> ${i.email || "-"}</div>
 <div><b>Type:</b> ${i.type}</div>
 <div><b>Status:</b> PENDING</div>
+
+<div class="btn" onclick="copyAll('${i.deviceId}','${(i.email||"").replace(/'/g,"")}')">
+Copy IMEI + Email
+</div>
 
 <a class="delete" href="/admin/delete/${i._id}">Delete</a>
 
@@ -262,9 +264,10 @@ ${i.email || "-"}
 </div>
 
 <script>
-function copyText(t){
-navigator.clipboard.writeText(t || "");
-alert("Copied: " + t);
+function copyAll(id, email){
+const text = `IMEI/SN: ${id}\nEmail: ${email || "-"}`;
+navigator.clipboard.writeText(text);
+alert("Copied:\\n" + text);
 }
 </script>
 
@@ -274,7 +277,7 @@ alert("Copied: " + t);
 });
 
 /* =========================
-START SERVER
+START
 ========================= */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("RUNNING ON", PORT));
