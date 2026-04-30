@@ -14,39 +14,15 @@
 
 <style>
 *{box-sizing:border-box;}
-body{
-margin:0;
-font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-background:#f2f2f7;
-overflow-x:hidden;
-}
-
+body{margin:0;font-family:-apple-system;background:#f2f2f7;}
 .screen{padding:55px 16px;max-width:420px;margin:0 auto;}
-h2{font-size:22px;font-weight:600;}
-.sub{font-size:13px;color:#8e8e93;margin-bottom:20px;}
 
-.logo{display:flex;justify-content:center;margin-bottom:15px;}
-.logo img{width:95px;height:95px;border-radius:50%;}
+.block{background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;}
+input{width:100%;padding:14px;border:none;font-size:15px;}
 
-.block{background:#fff;border-radius:14px;border:1px solid #e5e5ea;padding:12px;margin-bottom:12px;}
+.row{padding:14px;border:1px solid #e5e5ea;border-radius:12px;margin-bottom:10px;background:#fff;}
 
-input{width:100%;padding:14px;border:none;outline:none;font-size:15px;}
-
-.row{padding:14px;cursor:pointer;border:1px solid #e5e5ea;border-radius:12px;margin-bottom:10px;background:#fff;}
-
-.row.active{border:2px solid #0a84ff;background:#eef5ff;}
-
-button{
-width:100%;
-padding:14px;
-border:none;
-border-radius:14px;
-font-size:15px;
-cursor:pointer;
-background:#0a84ff;
-color:#fff;
-font-weight:600;
-}
+button{width:100%;padding:14px;border:none;border-radius:14px;background:#0a84ff;color:#fff;font-weight:600;}
 
 .pay{background:#34c759;}
 
@@ -58,13 +34,6 @@ font-weight:600;
 <body>
 
 <div class="screen">
-
-<div class="logo">
-<img src="images/logo.jpeg">
-</div>
-
-<h2>IMEI Check</h2>
-<div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
 <input id="imeiInput" placeholder="Enter IMEI or SN">
@@ -79,7 +48,8 @@ font-weight:600;
 
 <script>
 
-const API_URL = "http://130.61.122.182:3000";
+/* 🔥 FIX: always HTTPS safe */
+const API_URL = "https://130.61.122.182:3000";
 
 let imei = "";
 let type = "";
@@ -93,10 +63,8 @@ const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
-<div class="error">
-❌ Invalid IMEI / SN
-</div>
-<input id="imeiInput" placeholder="Enter IMEI or SN">
+<div class="error">Invalid IMEI / SN</div>
+<input id="imeiInput">
 <button onclick="setIMEI()">Continue</button>
 `;
 return;
@@ -107,7 +75,7 @@ document.getElementById("imeiBlock").innerHTML = `<div class="loading">Checking.
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML = `<div>ID: <b>${imei}</b></div>`;
 showType();
-},1000);
+},800);
 
 }
 
@@ -115,18 +83,15 @@ function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
-
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
-
 </div>`;
 }
 
 function setType(el,t){
 
 type = t;
-
 document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
 el.classList.add("active");
 
@@ -150,10 +115,10 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">Pay $1.99</button>
-`;
+<button class="pay" onclick="payToCheck()">Pay $1.99</button>`;
 }
 
+/* 🔥 FIXED FETCH (Safari safe + no "Load failed") */
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
@@ -165,30 +130,33 @@ return;
 
 try {
 
+/* timeout protection */
+const controller = new AbortController();
+setTimeout(()=>controller.abort(), 12000);
+
 const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
-headers:{"Content-Type":"application/json"},
-body: JSON.stringify({ deviceId: imei, email, type })
+headers:{ "Content-Type":"application/json" },
+body: JSON.stringify({ deviceId: imei, email, type }),
+signal: controller.signal
 });
 
-// FIX: Stripe иногда не JSON
+const text = await res.text();
+
+/* safe parse */
 let data;
-try {
-data = await res.json();
-} catch(e){
-data = await res.text();
-}
+try { data = JSON.parse(text); }
+catch(e){ throw new Error("Invalid server response"); }
 
 if(data.url){
 window.location.href = data.url;
 } else {
-alert("Payment error");
-console.log(data);
+throw new Error("No payment URL");
 }
 
 } catch(err){
-alert("Network error");
 console.log(err);
+alert("Network error: " + err.message);
 }
 
 }
