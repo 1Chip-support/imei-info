@@ -4,16 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+
 <title>1Chip</title>
 
 <link rel="icon" type="image/jpeg" href="images/logo.jpeg">
 <link rel="apple-touch-icon" href="images/logo.jpeg">
+
+<meta name="application-name" content="1Chip">
+<meta name="apple-mobile-web-app-title" content="1Chip">
+
+<meta property="og:title" content="1Chip">
+<meta property="og:site_name" content="1Chip">
+<meta property="og:description" content="Only for Apple devices">
+<meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
+<meta property="og:type" content="website">
+
+<meta name="description" content="IMEI Check service for Apple devices">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a84ff">
 
 <style>
 *{box-sizing:border-box;}
+
 body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
@@ -21,20 +35,75 @@ background:#f2f2f7;
 overflow-x:hidden;
 }
 
-.screen{padding:55px 16px;max-width:420px;margin:0 auto;}
-h2{font-size:22px;font-weight:600;}
-.sub{font-size:13px;color:#8e8e93;margin-bottom:20px;}
+.screen{
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+max-width:420px;
+margin:0 auto;
+}
 
-.logo{display:flex;justify-content:center;margin-bottom:15px;}
-.logo img{width:95px;height:95px;border-radius:50%;}
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
+}
 
-.block{background:#fff;border-radius:14px;border:1px solid #e5e5ea;padding:12px;margin-bottom:12px;}
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
 
-input{width:100%;padding:14px;border:none;outline:none;font-size:15px;}
+.logo{
+display:flex;
+justify-content:center;
+margin-bottom:15px;
+}
 
-.row{padding:14px;cursor:pointer;border:1px solid #e5e5ea;border-radius:12px;margin-bottom:10px;background:#fff;}
+.logo img{
+width:95px;
+height:95px;
+border-radius:50%;
+object-fit:cover;
+box-shadow:0 10px 25px rgba(0,0,0,0.15);
+}
 
-.row.active{border:2px solid #0a84ff;background:#eef5ff;}
+.block{
+background:#fff;
+border-radius:14px;
+border:1px solid #e5e5ea;
+padding:12px;
+margin-bottom:12px;
+}
+
+input{
+width:100%;
+padding:14px;
+border:none;
+outline:none;
+font-size:15px;
+}
+
+.value{
+padding:14px;
+font-size:15px;
+word-break:break-all;
+}
+
+.row{
+padding:14px;
+cursor:pointer;
+font-size:15px;
+border:1px solid #e5e5ea;
+border-radius:12px;
+margin-bottom:10px;
+background:#fff;
+transition:0.2s;
+}
+
+.row.active{
+border:2px solid #0a84ff;
+background:#eef5ff;
+}
 
 button{
 width:100%;
@@ -43,15 +112,33 @@ border:none;
 border-radius:14px;
 font-size:15px;
 cursor:pointer;
+margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
 }
 
-.pay{background:#34c759;}
+.pay{
+background:#34c759;
+color:white;
+font-weight:600;
+}
 
-.error{background:#ff3b30;color:#fff;padding:12px;border-radius:12px;margin-bottom:10px;}
-.loading{text-align:center;padding:20px;color:#8e8e93;}
+.error{
+background:#ff3b30;
+color:#fff;
+padding:12px;
+border-radius:12px;
+font-size:14px;
+margin-bottom:10px;
+}
+
+.loading{
+text-align:center;
+padding:20px;
+font-size:14px;
+color:#8e8e93;
+}
 </style>
 </head>
 
@@ -60,7 +147,7 @@ font-weight:600;
 <div class="screen">
 
 <div class="logo">
-<img src="images/logo.jpeg">
+<img src="images/logo.jpeg" alt="logo">
 </div>
 
 <h2>IMEI Check</h2>
@@ -94,7 +181,9 @@ const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
 <div class="error">
-❌ Invalid IMEI / SN
+❌ Invalid IMEI / SN<br>
+IMEI = 15 digits<br>
+SN = 10-12 letters/numbers
 </div>
 <input id="imeiInput" placeholder="Enter IMEI or SN">
 <button onclick="setIMEI()">Continue</button>
@@ -102,13 +191,18 @@ document.getElementById("imeiBlock").innerHTML = `
 return;
 }
 
-document.getElementById("imeiBlock").innerHTML = `<div class="loading">Checking...</div>`;
+document.getElementById("imeiBlock").innerHTML = `
+<div class="loading">Checking device...</div>
+`;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML = `<div>ID: <b>${imei}</b></div>`;
+document.getElementById("imeiBlock").innerHTML = `
+<div class="value">
+ID: <b>${imei}</b>
+</div>
+`;
 showType();
-},1000);
-
+}, 1200);
 }
 
 function showType(){
@@ -116,18 +210,30 @@ function showType(){
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
 
-<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
-<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
-<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
+<div class="row" onclick="setType(this,'carrier')">
+Carrier status
+</div>
 
-</div>`;
+<div class="row" onclick="setType(this,'findmy')">
+Find My iPhone
+</div>
+
+<div class="row" onclick="setType(this,'blacklist')">
+Blacklist check
+</div>
+
+</div>
+`;
 }
 
 function setType(el,t){
 
 type = t;
 
-document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
+document.querySelectorAll(".row").forEach(e=>{
+e.classList.remove("active");
+});
+
 el.classList.add("active");
 
 showEmail();
@@ -140,7 +246,8 @@ if(document.getElementById("emailBlock").innerHTML) return;
 document.getElementById("emailBlock").innerHTML = `
 <div class="block">
 <input id="email" placeholder="Enter email">
-</div>`;
+</div>
+`;
 
 showPay();
 }
@@ -150,7 +257,9 @@ function showPay(){
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">Pay $1.99</button>
+<button class="pay" onclick="payToCheck()">
+Pay to Check $1.99
+</button>
 `;
 }
 
@@ -168,26 +277,31 @@ try {
 const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body: JSON.stringify({ deviceId: imei, email, type })
+body: JSON.stringify({
+deviceId: imei,
+email: email,
+type: type
+})
 });
 
-// FIX: Stripe иногда не JSON
-let data;
-try {
-data = await res.json();
-} catch(e){
-data = await res.text();
+if(!res.ok){
+throw new Error("Server error");
 }
 
+const data = await res.json();
+
+console.log("Stripe:", data);
+
 if(data.url){
-window.location.href = data.url;
+setTimeout(()=>{
+window.location.replace(data.url);
+},150);
 } else {
-alert("Payment error");
-console.log(data);
+alert("Payment error (no URL)");
 }
 
 } catch(err){
-alert("Network error");
+alert("Error: " + err.message);
 console.log(err);
 }
 
