@@ -166,7 +166,7 @@ color:#8e8e93;
 
 <script>
 
-const API_URL = "http://130.61.122.182:3000"; // ✅ FIXED
+const API_URL = "https://imei-info.onrender.com";
 
 let imei = "";
 let type = "";
@@ -175,6 +175,7 @@ function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
 
+// IMEI or SN validation
 const isIMEI = /^\d{15}$/.test(imei);
 const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 
