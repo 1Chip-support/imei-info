@@ -166,31 +166,9 @@ color:#8e8e93;
 
 <script>
 
-/* =========================
-API FALLBACK (HTTPS → HTTP)
-========================= */
-let API_URL = "https://130.61.122.182:3000";
-
-async function checkAPI(){
-try{
-  const res = await fetch(API_URL + "/check", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({deviceId:"test"})
-  });
-
-  if(!res.ok) throw new Error();
-}catch(e){
-  console.log("HTTPS failed → switching to HTTP");
-  API_URL = "http://130.61.122.182:3000";
-}
-}
-
-checkAPI();
-
-/* =========================
-APP LOGIC
-========================= */
+// 自动获取当前网站的域名，并匹配 http 或 https
+// 这样就不会出现混合内容拦截的问题了
+const API_URL = window.location.origin; 
 
 let imei = "";
 let type = "";
@@ -205,9 +183,11 @@ const isSN = /^[A-Za-z0-9]{10,12}$/.test(imei);
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML = `
 <div class="error">
-❌ Invalid IMEI / SN
-IMEI = 15 digits
-SN = 10-12 letters/numbers
+  ❌ Invalid IMEI / SN
+
+  IMEI = 15 digits
+
+  SN = 10-12 letters/numbers
 </div>
 <input id="imeiInput" placeholder="Enter IMEI or SN">
 <button onclick="setIMEI()">Continue</button>
@@ -215,24 +195,37 @@ SN = 10-12 letters/numbers
 return;
 }
 
-document.getElementById("imeiBlock").innerHTML =
-`<div class="loading">Checking device...</div>`;
+document.getElementById("imeiBlock").innerHTML = `
+<div class="loading">Checking device...</div>
+`;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML =
-`<div class="value">ID: <b>${imei}</b></div>`;
+document.getElementById("imeiBlock").innerHTML = `
+<div class="value">
+  ID: <b>${imei}</b>
+</div>
+`;
 showType();
-},1200);
-
+}, 1200);
 }
 
 function showType(){
 
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
-<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
-<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
-<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
+
+<div class="row" onclick="setType(this,'carrier')">
+  Carrier status
+</div>
+
+<div class="row" onclick="setType(this,'findmy')">
+  Find My iPhone
+</div>
+
+<div class="row" onclick="setType(this,'blacklist')">
+  Blacklist check
+</div>
+
 </div>
 `;
 }
@@ -241,7 +234,10 @@ function setType(el,t){
 
 type = t;
 
-document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
+document.querySelectorAll(".row").forEach(e=>{
+e.classList.remove("active");
+});
+
 el.classList.add("active");
 
 showEmail();
@@ -280,38 +276,56 @@ alert("Fill all fields");
 return;
 }
 
-const old = btn.innerText;
+// 按钮防抖处理
+const originalText = btn.innerText;
 btn.innerText = "Processing...";
 btn.disabled = true;
+btn.style.opacity = "0.6";
 
-try{
+// 清除之前的错误提示
+const prevError = document.getElementById("api-error");
+if(prevError) prevError.remove();
 
+try {
+// 发送请求到当前域名的 /create-payment 接口
 const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body: JSON.stringify({
 deviceId: imei,
-email,
-type
+email: email,
+type: type
 })
 });
 
-if(!res.ok) throw new Error("Server error " + res.status);
+// 检查网络响应是否成功
+if (!res.ok) {
+   const errorText = await res.text();
+   throw new Error(`Server Error: ${res.status} - ${errorText}`);
+}
 
 const data = await res.json();
 
 if(data.url){
 window.location.href = data.url;
-}else{
-throw new Error("No payment URL");
+} else {
+throw new Error("No payment URL received from server");
 }
 
-}catch(err){
-alert("Payment failed:\n" + err.message);
-btn.innerText = old;
+} catch (err) {
+console.error(err);
+// 在页面上显示详细的错误信息，方便排查
+const errorDiv = document.createElement("div");
+errorDiv.id = "api-error";
+errorDiv.className = "error";
+errorDiv.innerHTML = `❌ Payment request failed: ${err.message}  Please check your server logs or network connection.`;
+document.getElementById("payBlock").prepend(errorDiv);
+
+// 恢复按钮状态
+btn.innerText = originalText;
 btn.disabled = false;
+btn.style.opacity = "1";
 }
-
 }
 
 </script>
