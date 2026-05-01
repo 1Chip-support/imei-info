@@ -16,7 +16,7 @@
 
 body{
 margin:0;
-font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
 background:#f2f2f7;
 -webkit-font-smoothing:antialiased;
 }
@@ -25,11 +25,11 @@ background:#f2f2f7;
 padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-animation:fade .3s ease;
+animation:fade .35s ease;
 }
 
 @keyframes fade{
-from{opacity:0;transform:translateY(10px);}
+from{opacity:0;transform:translateY(12px);}
 to{opacity:1;transform:translateY(0);}
 }
 
@@ -52,17 +52,17 @@ to{transform:scale(1);opacity:1;}
 }
 
 h2{
-font-size:22px;
-font-weight:600;
-margin:0;
 text-align:center;
+font-size:22px;
+margin:0;
+font-weight:600;
 }
 
 .sub{
+text-align:center;
 font-size:13px;
 color:#8e8e93;
-text-align:center;
-margin-bottom:20px;
+margin-bottom:18px;
 }
 
 .block{
@@ -128,6 +128,14 @@ margin-bottom:10px;
 cursor:pointer;
 }
 
+.info{
+text-align:center;
+font-size:13px;
+color:#8e8e93;
+margin-top:8px;
+animation:fade 1s ease;
+}
+
 .error{
 background:#ff3b30;
 color:#fff;
@@ -150,6 +158,8 @@ padding:20px;
 color:#8e8e93;
 }
 
+.hidden{display:none;}
+
 </style>
 </head>
 
@@ -165,7 +175,7 @@ color:#8e8e93;
 <div class="sub">Only for Apple devices</div>
 
 <div id="imeiBlock" class="block">
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI(this)">Continue</button>
 </div>
 
@@ -177,80 +187,93 @@ color:#8e8e93;
 
 <script>
 
-const API_URL = "https://imei-info.onrender.com";
+const API_URL="https://imei-info.onrender.com";
 
-let imei="", type="", detectedType="";
+let imei="",type="",step=0;
 
 /* ---------- IMEI ---------- */
 function setIMEI(btn){
 
-imei = document.getElementById("imeiInput").value.trim();
+imei=document.getElementById("imeiInput").value.trim();
 
-const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9]{10,12}$/.test(imei);
+const isIMEI=/^\d{15}$/.test(imei);
+const isSN=/^(?=.*[A-Za-z])[A-Za-zA-Z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML =
+document.getElementById("imeiBlock").innerHTML=
 `<div class="error">Invalid IMEI / SN</div>
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI(this)">Continue</button>`;
 return;
 }
 
-btn.disabled = true;
+if(btn) btn.disabled=true;
 
-detectedType = isIMEI ? "IMEI" : "SN";
-
-document.getElementById("imeiBlock").innerHTML =
-`<div class="loading">Checking device...</div>`;
+document.getElementById("imeiBlock").innerHTML=
+`<div class="loading">Processing request...</div>`;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML =
-`<div>${detectedType}: <b>${imei}</b></div>`;
+document.getElementById("imeiBlock").innerHTML=
+`<div>${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
+
 showType();
-},700);
+
+},900);
 }
 
 /* ---------- TYPE ---------- */
 function showType(){
-document.getElementById("typeBlock").innerHTML = `
+
+document.getElementById("typeBlock").innerHTML=`
 <div class="block">
 <div class="back" onclick="resetAll()">← Change IMEI</div>
 
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
+
+<div class="info">Your request will be processed within 24 hours</div>
 </div>`;
 }
 
 function setType(el,t){
+
 type=t;
+
 document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
 el.classList.add("active");
+
 showEmail();
 }
 
 /* ---------- EMAIL ---------- */
 function showEmail(){
-if(document.getElementById("emailBlock").children.length) return;
+if(document.getElementById("emailBlock").children.length>0) return;
 
-document.getElementById("emailBlock").innerHTML = `
+document.getElementById("emailBlock").innerHTML=`
 <div class="block">
 <input id="email" placeholder="Enter email">
 </div>`;
-
-showPay();
 }
 
-/* ---------- PAY ---------- */
+/* ---------- PAY BUTTON ONLY AFTER ALL STEPS ---------- */
 function showPay(){
-if(document.getElementById("payBlock").children.length) return;
+if(document.getElementById("payBlock").children.length>0) return;
 
-document.getElementById("payBlock").innerHTML = `
+document.getElementById("payBlock").innerHTML=`
 <button class="pay" onclick="pay(this)">Pay $1.99</button>`;
 }
 
-/* ---------- SAFE PAY ---------- */
+/* ---------- AUTO CHECK ---------- */
+setInterval(()=>{
+
+if(imei && type && document.getElementById("email")){
+showPay();
+}
+
+},500);
+
+/* ---------- PAY ---------- */
 async function pay(btn){
 
 const email=document.getElementById("email").value.trim();
@@ -269,7 +292,6 @@ return;
 btn.innerText="Processing...";
 btn.disabled=true;
 
-/* timeout protection */
 const controller=new AbortController();
 const timeout=setTimeout(()=>controller.abort(),10000);
 
@@ -286,21 +308,18 @@ clearTimeout(timeout);
 
 if(!res.ok) throw new Error();
 
-let data;
-try{
-data=await res.json();
-}catch{
-throw new Error();
-}
+let data=await res.json();
 
 if(data.url){
 window.location.href=data.url;
 }else throw new Error();
 
 }catch(e){
+
 alert("Server error");
 btn.innerText="Pay $1.99";
 btn.disabled=false;
+
 }
 
 }
