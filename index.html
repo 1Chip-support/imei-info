@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-<title>1Chip</title>
+<title>1Chip - IMEI Check</title>
+
+<meta name="description" content="IMEI Check service for Apple devices">
 
 <link rel="icon" href="images/logo.jpeg">
 <link rel="apple-touch-icon" href="images/logo.jpeg">
-
-<meta name="description" content="IMEI Check service for Apple devices">
 
 <style>
 *{box-sizing:border-box;}
@@ -22,9 +22,9 @@ background:#f2f2f7;
 }
 
 .screen{
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 animation:fade .35s ease;
 }
 
@@ -133,7 +133,20 @@ text-align:center;
 font-size:13px;
 color:#8e8e93;
 margin-top:8px;
+}
+
+.loading{
+text-align:center;
+padding:20px;
+color:#8e8e93;
 animation:fade 1s ease;
+}
+
+.success{
+text-align:center;
+font-size:14px;
+color:#1c1c1e;
+padding:10px;
 }
 
 .error{
@@ -152,12 +165,6 @@ animation:shake .25s;
 100%{transform:translateX(0);}
 }
 
-.loading{
-text-align:center;
-padding:20px;
-color:#8e8e93;
-}
-
 .hidden{display:none;}
 
 </style>
@@ -174,7 +181,9 @@ color:#8e8e93;
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<div id="imeiBlock" class="block">
+<div id="app">
+
+<div class="block" id="imeiBlock">
 <input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI(this)">Continue</button>
 </div>
@@ -185,58 +194,60 @@ color:#8e8e93;
 
 </div>
 
+</div>
+
 <script>
 
 const API_URL="https://imei-info.onrender.com";
 
 let imei="",type="",step=0;
 
-/* ---------- IMEI ---------- */
+/* ---------- IMEI STEP ---------- */
 function setIMEI(btn){
 
 imei=document.getElementById("imeiInput").value.trim();
 
 const isIMEI=/^\d{15}$/.test(imei);
-const isSN=/^(?=.*[A-Za-z])[A-Za-zA-Z0-9]{10,12}$/.test(imei);
+const isSN=/^[A-Z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML=
-`<div class="error">Invalid IMEI / SN</div>
+document.getElementById("imeiBlock").innerHTML=`
+<div class="error">Invalid IMEI / SN</div>
 <input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI(this)">Continue</button>`;
 return;
 }
 
-if(btn) btn.disabled=true;
+btn.disabled=true;
 
 document.getElementById("imeiBlock").innerHTML=
 `<div class="loading">Processing request...</div>`;
 
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML=
-`<div>${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
-
+`<div class="success">${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
 showType();
-
 },900);
 }
 
-/* ---------- TYPE ---------- */
+/* ---------- TYPE STEP ---------- */
 function showType(){
 
 document.getElementById("typeBlock").innerHTML=`
 <div class="block">
-<div class="back" onclick="resetAll()">← Change IMEI</div>
 
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
 
 <div class="info">Your request will be processed within 24 hours</div>
+
 </div>`;
 }
 
 function setType(el,t){
+
+if(type) return;
 
 type=t;
 
@@ -246,32 +257,23 @@ el.classList.add("active");
 showEmail();
 }
 
-/* ---------- EMAIL ---------- */
+/* ---------- EMAIL STEP ---------- */
 function showEmail(){
-if(document.getElementById("emailBlock").children.length>0) return;
 
 document.getElementById("emailBlock").innerHTML=`
 <div class="block">
 <input id="email" placeholder="Enter email">
 </div>`;
+
+setTimeout(showPay,300);
 }
 
-/* ---------- PAY BUTTON ONLY AFTER ALL STEPS ---------- */
+/* ---------- PAY STEP ---------- */
 function showPay(){
-if(document.getElementById("payBlock").children.length>0) return;
 
 document.getElementById("payBlock").innerHTML=`
 <button class="pay" onclick="pay(this)">Pay $1.99</button>`;
 }
-
-/* ---------- AUTO CHECK ---------- */
-setInterval(()=>{
-
-if(imei && type && document.getElementById("email")){
-showPay();
-}
-
-},500);
 
 /* ---------- PAY ---------- */
 async function pay(btn){
@@ -289,8 +291,8 @@ alert("Invalid email");
 return;
 }
 
-btn.innerText="Processing...";
 btn.disabled=true;
+btn.innerText="Processing...";
 
 const controller=new AbortController();
 const timeout=setTimeout(()=>controller.abort(),10000);
@@ -305,10 +307,11 @@ signal:controller.signal
 });
 
 clearTimeout(timeout);
+controller.abort();
 
 if(!res.ok) throw new Error();
 
-let data=await res.json();
+const data=await res.json();
 
 if(data.url){
 window.location.href=data.url;
@@ -317,16 +320,12 @@ window.location.href=data.url;
 }catch(e){
 
 alert("Server error");
-btn.innerText="Pay $1.99";
+
 btn.disabled=false;
+btn.innerText="Pay $1.99";
 
 }
 
-}
-
-/* ---------- RESET ---------- */
-function resetAll(){
-location.reload();
 }
 
 </script>
