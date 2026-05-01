@@ -138,11 +138,16 @@ font-size:14px;
 margin-bottom:10px;
 }
 
-.loading{
-text-align:center;
-padding:20px;
-font-size:14px;
-color:#6e6e73;
+/* Новый стиль для предупреждения о времени */
+.warning {
+    background: #fff3cd;
+    color: #856404;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+    border: 1px solid #ffeeba;
 }
 </style>
 </head>
@@ -196,8 +201,8 @@ else if(isSN) detectedType = "SN";
 else{
 document.getElementById("imeiBlock").innerHTML = `
 <div class="error">
-❌ Invalid IMEI / SN<br>
-IMEI = 15 digits<br>
+❌ Invalid IMEI / SN 
+IMEI = 15 digits 
 SN = 10–12 letters/numbers
 </div>
 <input id="imeiInput" placeholder="Enter IMEI/SN">
@@ -206,10 +211,8 @@ SN = 10–12 letters/numbers
 return;
 }
 
-document.getElementById("imeiBlock").innerHTML =
-`<div class="loading">Checking device...</div>`;
-
-setTimeout(()=>{
+// Убрали имитацию проверки (setTimeout)
+// Сразу показываем, что IMEI принят, и переходим к выбору типа
 document.getElementById("imeiBlock").innerHTML = `
 <div class="value">
 ${detectedType}: <b>${imei}</b>
@@ -217,7 +220,6 @@ ${detectedType}: <b>${imei}</b>
 </div>
 `;
 showType();
-}, 800);
 }
 
 function showType(){
@@ -262,7 +264,11 @@ function showPay(){
 
 if(document.getElementById("payBlock").innerHTML) return;
 
+// Добавили блок с предупреждением о времени (24 часа)
 document.getElementById("payBlock").innerHTML = `
+<div class="warning">
+⚠️ The answer will be within 24 hours
+</div>
 <button class="pay" onclick="payToCheck()">
 Pay to Check $1.99
 </button>
