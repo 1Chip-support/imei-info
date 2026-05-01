@@ -6,7 +6,7 @@
 
 <title>1Chip</title>
 
-<link rel="icon" type="image/jpeg" href="images/logo.jpeg">
+<link rel="icon" href="images/logo.jpeg">
 <link rel="apple-touch-icon" href="images/logo.jpeg">
 
 <meta name="description" content="IMEI Check service for Apple devices">
@@ -18,12 +18,19 @@ body{
 margin:0;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
 background:#f2f2f7;
+-webkit-font-smoothing:antialiased;
 }
 
 .screen{
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+animation:fade .35s ease;
+}
+
+@keyframes fade{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
 }
 
 .logo{
@@ -36,12 +43,18 @@ margin-bottom:15px;
 width:95px;height:95px;
 border-radius:50%;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
+animation:pop .4s ease;
+}
+
+@keyframes pop{
+from{transform:scale(.8);opacity:0;}
+to{transform:scale(1);opacity:1;}
 }
 
 h2{
 text-align:center;
 font-size:22px;
-margin:0 0 5px 0;
+margin:0;
 font-weight:600;
 }
 
@@ -54,10 +67,17 @@ margin-bottom:20px;
 
 .block{
 background:#fff;
-border-radius:14px;
+border-radius:16px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.03);
+animation:slide .25s ease;
+}
+
+@keyframes slide{
+from{opacity:0;transform:translateY(8px);}
+to{opacity:1;transform:translateY(0);}
 }
 
 input{
@@ -75,28 +95,47 @@ border:none;
 border-radius:14px;
 font-size:15px;
 cursor:pointer;
-margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
+transition:.2s;
 }
 
-.pay{
-background:#34c759;
-}
+button:active{transform:scale(.98);}
+
+.pay{background:#34c759;}
 
 .row{
 padding:14px;
-cursor:pointer;
 border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
-background:#fff;
+cursor:pointer;
+transition:.2s;
 }
 
 .row.active{
 border:2px solid #0a84ff;
 background:#eef5ff;
+}
+
+.info{
+text-align:center;
+font-size:13px;
+color:#8e8e93;
+margin-top:8px;
+animation:fade 1s ease;
+}
+
+.notice{
+background:#f1f5ff;
+border:1px solid #d6e4ff;
+padding:12px;
+border-radius:12px;
+font-size:13px;
+color:#1c1c1e;
+margin-top:10px;
+animation:fade .4s ease;
 }
 
 .loading{
@@ -111,7 +150,18 @@ color:#fff;
 padding:12px;
 border-radius:12px;
 margin-bottom:10px;
+animation:shake .25s;
 }
+
+@keyframes shake{
+0%{transform:translateX(0);}
+25%{transform:translateX(-5px);}
+50%{transform:translateX(5px);}
+100%{transform:translateX(0);}
+}
+
+.hidden{display:none;}
+
 </style>
 </head>
 
@@ -126,7 +176,7 @@ margin-bottom:10px;
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<div class="block" id="imeiBlock">
+<div id="imeiBlock" class="block">
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
@@ -149,7 +199,7 @@ function setIMEI(){
 imei=document.getElementById("imeiInput").value.trim();
 
 const isIMEI=/^\d{15}$/.test(imei);
-const isSN=/^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
+const isSN=/^[A-Z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML=`
@@ -191,20 +241,28 @@ function showEmail(){
 
 document.getElementById("emailBlock").innerHTML=`
 <div class="block">
-<input id="email" placeholder="Enter email" oninput="showPayBtn()">
+<input id="email" placeholder="Enter email" oninput="emailNotice()">
 </div>`;
 }
 
-/* ---------- SHOW PAY ONLY AFTER EMAIL ---------- */
-function showPayBtn(){
+/* ---------- NOTICE AFTER EMAIL ---------- */
+function emailNotice(){
 
 const email=document.getElementById("email").value.trim();
 const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-if(!valid) return;
+if(!valid){
+document.getElementById("payBlock").innerHTML="";
+return;
+}
 
 document.getElementById("payBlock").innerHTML=`
-<button class="pay" onclick="pay(this)">Pay $1.99</button>`;
+<div class="notice">
+Your request will be processed within 24 hours.
+</div>
+
+<button class="pay" onclick="pay(this)">Pay $1.99</button>
+`;
 }
 
 /* ---------- PAY ---------- */
