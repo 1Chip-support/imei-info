@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-<title>1Chip - IMEI Check</title>
+<title>1Chip</title>
+
+<link rel="icon" type="image/jpeg" href="images/logo.jpeg">
+<link rel="apple-touch-icon" href="images/logo.jpeg">
 
 <meta name="description" content="IMEI Check service for Apple devices">
-
-<link rel="icon" href="images/logo.jpeg">
-<link rel="apple-touch-icon" href="images/logo.jpeg">
 
 <style>
 *{box-sizing:border-box;}
@@ -18,19 +18,12 @@ body{
 margin:0;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
 background:#f2f2f7;
--webkit-font-smoothing:antialiased;
 }
 
 .screen{
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
-animation:fade .35s ease;
-}
-
-@keyframes fade{
-from{opacity:0;transform:translateY(12px);}
-to{opacity:1;transform:translateY(0);}
 }
 
 .logo{
@@ -43,18 +36,12 @@ margin-bottom:15px;
 width:95px;height:95px;
 border-radius:50%;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
-animation:pop .4s ease;
-}
-
-@keyframes pop{
-from{transform:scale(.8);opacity:0;}
-to{transform:scale(1);opacity:1;}
 }
 
 h2{
 text-align:center;
 font-size:22px;
-margin:0;
+margin:0 0 5px 0;
 font-weight:600;
 }
 
@@ -62,22 +49,15 @@ font-weight:600;
 text-align:center;
 font-size:13px;
 color:#8e8e93;
-margin-bottom:18px;
+margin-bottom:20px;
 }
 
 .block{
 background:#fff;
-border-radius:16px;
+border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
-box-shadow:0 5px 15px rgba(0,0,0,0.03);
-animation:slide .25s ease;
-}
-
-@keyframes slide{
-from{opacity:0;transform:translateY(10px);}
-to{opacity:1;transform:translateY(0);}
 }
 
 input{
@@ -95,58 +75,34 @@ border:none;
 border-radius:14px;
 font-size:15px;
 cursor:pointer;
+margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-transition:.2s;
 }
 
-button:active{transform:scale(.98);}
-
-.pay{background:#34c759;}
+.pay{
+background:#34c759;
+}
 
 .row{
 padding:14px;
+cursor:pointer;
 border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
-cursor:pointer;
-transition:.2s;
+background:#fff;
 }
-
-.row:active{transform:scale(.98);}
 
 .row.active{
 border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
-.back{
-font-size:13px;
-color:#0a84ff;
-margin-bottom:10px;
-cursor:pointer;
-}
-
-.info{
-text-align:center;
-font-size:13px;
-color:#8e8e93;
-margin-top:8px;
-}
-
 .loading{
 text-align:center;
 padding:20px;
 color:#8e8e93;
-animation:fade 1s ease;
-}
-
-.success{
-text-align:center;
-font-size:14px;
-color:#1c1c1e;
-padding:10px;
 }
 
 .error{
@@ -155,18 +111,7 @@ color:#fff;
 padding:12px;
 border-radius:12px;
 margin-bottom:10px;
-animation:shake .25s;
 }
-
-@keyframes shake{
-0%{transform:translateX(0);}
-25%{transform:translateX(-5px);}
-50%{transform:translateX(5px);}
-100%{transform:translateX(0);}
-}
-
-.hidden{display:none;}
-
 </style>
 </head>
 
@@ -181,11 +126,9 @@ animation:shake .25s;
 <h2>IMEI Check</h2>
 <div class="sub">Only for Apple devices</div>
 
-<div id="app">
-
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI / SN">
-<button onclick="setIMEI(this)">Continue</button>
+<input id="imeiInput" placeholder="Enter IMEI/SN">
+<button onclick="setIMEI()">Continue</button>
 </div>
 
 <div id="typeBlock"></div>
@@ -194,82 +137,71 @@ animation:shake .25s;
 
 </div>
 
-</div>
-
 <script>
 
 const API_URL="https://imei-info.onrender.com";
 
-let imei="",type="",step=0;
+let imei="",type="";
 
-/* ---------- IMEI STEP ---------- */
-function setIMEI(btn){
+/* ---------- IMEI ---------- */
+function setIMEI(){
 
 imei=document.getElementById("imeiInput").value.trim();
 
 const isIMEI=/^\d{15}$/.test(imei);
-const isSN=/^[A-Z0-9]{10,12}$/.test(imei);
+const isSN=/^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML=`
 <div class="error">Invalid IMEI / SN</div>
-<input id="imeiInput" placeholder="Enter IMEI / SN">
-<button onclick="setIMEI(this)">Continue</button>`;
+<input id="imeiInput" placeholder="Enter IMEI/SN">
+<button onclick="setIMEI()">Continue</button>`;
 return;
 }
 
-btn.disabled=true;
-
 document.getElementById("imeiBlock").innerHTML=
-`<div class="loading">Processing request...</div>`;
+`<div class="loading">Checking device...</div>`;
 
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML=
-`<div class="success">${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
+`<div>${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
 showType();
-},900);
+},800);
 }
 
-/* ---------- TYPE STEP ---------- */
+/* ---------- TYPE ---------- */
 function showType(){
-
 document.getElementById("typeBlock").innerHTML=`
 <div class="block">
-
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
-
-<div class="info">Your request will be processed within 24 hours</div>
-
 </div>`;
 }
 
 function setType(el,t){
-
-if(type) return;
-
 type=t;
-
 document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
 el.classList.add("active");
-
 showEmail();
 }
 
-/* ---------- EMAIL STEP ---------- */
+/* ---------- EMAIL ---------- */
 function showEmail(){
 
 document.getElementById("emailBlock").innerHTML=`
 <div class="block">
-<input id="email" placeholder="Enter email">
+<input id="email" placeholder="Enter email" oninput="showPayBtn()">
 </div>`;
-
-setTimeout(showPay,300);
 }
 
-/* ---------- PAY STEP ---------- */
-function showPay(){
+/* ---------- SHOW PAY ONLY AFTER EMAIL ---------- */
+function showPayBtn(){
+
+const email=document.getElementById("email").value.trim();
+const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+if(!valid) return;
 
 document.getElementById("payBlock").innerHTML=`
 <button class="pay" onclick="pay(this)">Pay $1.99</button>`;
@@ -285,29 +217,16 @@ alert("Fill all fields");
 return;
 }
 
-const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-if(!isEmail){
-alert("Invalid email");
-return;
-}
-
 btn.disabled=true;
 btn.innerText="Processing...";
-
-const controller=new AbortController();
-const timeout=setTimeout(()=>controller.abort(),10000);
 
 try{
 
 const res=await fetch(API_URL+"/create-payment",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({deviceId:imei,email,type}),
-signal:controller.signal
+body:JSON.stringify({deviceId:imei,email,type})
 });
-
-clearTimeout(timeout);
-controller.abort();
 
 if(!res.ok) throw new Error();
 
@@ -318,12 +237,9 @@ window.location.href=data.url;
 }else throw new Error();
 
 }catch(e){
-
 alert("Server error");
-
 btn.disabled=false;
 btn.innerText="Pay $1.99";
-
 }
 
 }
