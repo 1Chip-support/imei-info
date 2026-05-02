@@ -35,13 +35,27 @@ background:#f2f2f7;
 overflow-x:hidden;
 }
 
-/* 🔥 iOS animation */
+/* 🔥 iOS animations */
 .fade-in{
 animation:fadeIn 0.5s ease;
 }
 
 .slide-up{
 animation:slideUp 0.5s ease;
+}
+
+/* ❌ Error shake (iOS style) */
+.shake{
+animation:shake 0.4s cubic-bezier(.36,.07,.19,.97);
+}
+
+@keyframes shake{
+0%{transform:translateX(0);}
+20%{transform:translateX(-6px);}
+40%{transform:translateX(6px);}
+60%{transform:translateX(-4px);}
+80%{transform:translateX(4px);}
+100%{transform:translateX(0);}
 }
 
 @keyframes fadeIn{
@@ -98,6 +112,7 @@ border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
+transition:0.2s;
 }
 
 input{
@@ -216,19 +231,25 @@ let detectedType = "";
 
 function setIMEI(){
 
+const block = document.getElementById("imeiBlock");
+
 imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
-
-// SN: 10–12 символов, минимум 1 буква и 1 цифра
 const isSN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
 else{
-document.getElementById("imeiBlock").innerHTML = `
+
+// ❌ shake animation
+block.classList.remove("shake");
+void block.offsetWidth;
+block.classList.add("shake");
+
+block.innerHTML = `
 <div class="error fade-in">
-❌ Invalid IMEI / SN<br>
+❌ Invalid IMEI / SN
 </div>
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
@@ -236,12 +257,12 @@ document.getElementById("imeiBlock").innerHTML = `
 return;
 }
 
-document.getElementById("imeiBlock").innerHTML = `
+block.innerHTML = `
 <div class="loading fade-in">Checking device...</div>
 `;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML = `
+block.innerHTML = `
 <div class="value slide-up">
 ${detectedType}: <b>${imei}</b>
 <div class="label">${detectedType} detected</div>
