@@ -219,7 +219,7 @@ function setIMEI(){
 imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
+const isSN = /^[A-Z0-9]{10,14}$/i.test(imei);
 
 if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
@@ -227,8 +227,7 @@ else{
 document.getElementById("imeiBlock").innerHTML = `
 <div class="error fade-in">
 ❌ Invalid IMEI / SN<br>
-IMEI = 15 digits<br>
-SN = 10-12 letters/numbers
+IMEI = 15 digits<br> SN = 10-12 letters/numbers
 </div>
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
