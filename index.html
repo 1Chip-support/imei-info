@@ -219,7 +219,9 @@ function setIMEI(){
 imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^[A-Z0-9]{10,14}$/i.test(imei);
+
+// SN: 10–12 символов, обязательно хотя бы 1 буква
+const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
 
 if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
