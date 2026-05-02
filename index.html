@@ -181,23 +181,32 @@ color:#8e8e93;
 margin-top:5px;
 }
 
-.back-btn{
-background:none!important;
-color:#0a84ff!important;
-padding:8px 0!important;
-margin:0 0 10px 0!important;
-font-size:16px!important;
-text-align:left!important;
-width:auto!important;
-font-weight:500!important;
-border-radius:8px!important;
-transition:all 0.2s ease!important;
+.back-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e5e5ea;
+  color: #007aff;
+  font-size: 16px;
+  font-weight: 600;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.back-btn:active{
-transform:scale(0.95);
-opacity:0.6;
-background:rgba(0,0,0,0.05)!important;
+.back-circle:active {
+  background: #d1d1d6;
+  transform: scale(0.92);
+}
+
+.value-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 </style>
@@ -289,10 +298,14 @@ setTimeout(()=>{
 const safeImei = escapeHtml(imei);
 const safeType = escapeHtml(detectedType);
 block.innerHTML = `
-<button class="back-btn" onclick="goBack()">← Back</button>
 <div class="value slide-up">
-${safeType}: <b>${safeImei}</b>
+<div class="value-header">
+<div class="back-circle" onclick="goBack()">&lt;</div>
+<div>
+<div>${safeType}: <b>${safeImei}</b></div>
 <div class="label">${safeType} detected</div>
+</div>
+</div>
 </div>`;
 showType();
 },1200);
