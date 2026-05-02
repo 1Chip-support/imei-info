@@ -181,33 +181,37 @@ color:#8e8e93;
 margin-top:5px;
 }
 
-.back-circle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #e5e5ea;
-  color: #000;
-  font-size: 18px;
-  font-weight: 700;
-  margin-right: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  letter-spacing: -2px;
-}
-
-.back-circle:active {
-  background: #d1d1d6;
-  transform: scale(0.92);
-}
-
-.value-header {
+/* Navigation */
+.nav {
   display: flex;
   align-items: center;
-  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #007aff;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0;
+  width: auto;
+}
+
+.back-btn:active {
+  opacity: 0.6;
+  transform: scale(0.97);
+}
+
+.back-btn .arrow {
+  font-size: 18px;
+  font-weight: 600;
 }
 
 </style>
@@ -299,14 +303,15 @@ setTimeout(()=>{
 const safeImei = escapeHtml(imei);
 const safeType = escapeHtml(detectedType);
 block.innerHTML = `
+<div class="nav slide-up">
+  <button class="back-btn" onclick="goBack()">
+    <span class="arrow">‹</span>
+    <span>Back</span>
+  </button>
+</div>
 <div class="value slide-up">
-<div class="value-header">
-<div class="back-circle" onclick="goBack()">&lt;</div>
-<div>
 <div>${safeType}: <b>${safeImei}</b></div>
 <div class="label">${safeType} detected</div>
-</div>
-</div>
 </div>`;
 showType();
 },1200);
