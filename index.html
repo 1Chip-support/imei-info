@@ -4,26 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
-
 <title>1Chip</title>
 
-<link rel="icon" type="image/jpeg" href="images/logo.jpeg">
-<link rel="apple-touch-icon" href="images/logo.jpeg">
-
+<!-- SEO -->
+<meta name="description" content="Fast IMEI check service for Apple devices, carrier, blacklist and Find My iPhone status">
 <meta name="application-name" content="1Chip">
 <meta name="apple-mobile-web-app-title" content="1Chip">
 
+<!-- iOS / PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a84ff">
+
+<!-- Favicon -->
+<link rel="icon" href="images/logo.jpeg">
+<link rel="apple-touch-icon" href="images/logo.jpeg">
+
+<!-- Open Graph -->
 <meta property="og:title" content="1Chip">
 <meta property="og:site_name" content="1Chip">
 <meta property="og:description" content="Only for Apple devices">
 <meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://imei-info.pages.dev/">
 
-<meta name="description" content="IMEI Check service for Apple devices">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0a84ff">
+<!-- Google verification -->
+<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8">
 
 <style>
 *{box-sizing:border-box;}
@@ -35,61 +40,20 @@ background:#f2f2f7;
 overflow-x:hidden;
 }
 
-/* 🔥 iOS animations */
-.fade-in{
-animation:fadeIn 0.5s ease;
-}
+/* Animations */
+.fade-in{animation:fadeIn .5s ease;}
+.slide-up{animation:slideUp .5s ease;}
+.shake{animation:shake .4s cubic-bezier(.36,.07,.19,.97);}
 
-.slide-up{
-animation:slideUp 0.5s ease;
-}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes shake{0%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}100%{transform:translateX(0);}}
 
-/* ❌ Error shake (iOS style) */
-.shake{
-animation:shake 0.4s cubic-bezier(.36,.07,.19,.97);
-}
-
-@keyframes shake{
-0%{transform:translateX(0);}
-20%{transform:translateX(-6px);}
-40%{transform:translateX(6px);}
-60%{transform:translateX(-4px);}
-80%{transform:translateX(4px);}
-100%{transform:translateX(0);}
-}
-
-@keyframes fadeIn{
-from{opacity:0;}
-to{opacity:1;}
-}
-
-@keyframes slideUp{
-from{
-opacity:0;
-transform:translateY(20px);
-}
-to{
-opacity:1;
-transform:translateY(0);
-}
-}
-
+/* Layout */
 .screen{
 padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-}
-
-h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px 0;
-}
-
-.sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
 }
 
 .logo{
@@ -106,35 +70,39 @@ object-fit:cover;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
 }
 
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
+}
+
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
+
+/* Blocks */
 .block{
 background:#fff;
 border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
-transition:0.2s;
 }
 
+/* Input */
 input{
 width:100%;
 padding:14px;
 border:none;
 outline:none;
 font-size:15px;
+-webkit-appearance:none;
+appearance:none;
 }
 
-.value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
-}
-
-.label{
-font-size:12px;
-color:#8e8e93;
-margin-top:5px;
-}
-
+/* Rows */
 .row{
 padding:14px;
 cursor:pointer;
@@ -143,7 +111,6 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
-transition:0.2s;
 }
 
 .row.active{
@@ -151,6 +118,7 @@ border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
+/* Button */
 button{
 width:100%;
 padding:14px;
@@ -162,7 +130,6 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-transition:0.2s;
 }
 
 button:active{
@@ -170,9 +137,7 @@ transform:scale(0.97);
 opacity:0.9;
 }
 
-.pay{
-background:#34c759;
-}
+.pay{background:#34c759;}
 
 .notice{
 font-size:13px;
@@ -196,6 +161,7 @@ padding:20px;
 font-size:14px;
 color:#8e8e93;
 }
+
 </style>
 </head>
 
@@ -203,21 +169,23 @@ color:#8e8e93;
 
 <div class="screen">
 
-<div class="logo fade-in">
-<img src="images/logo.jpeg" alt="logo">
-</div>
+  <div class="logo fade-in">
+    <img src="images/logo.jpeg" alt="logo">
+  </div>
 
-<h2 class="fade-in">IMEI Check</h2>
-<div class="sub fade-in">Only for Apple devices</div>
+  <h2 class="fade-in">IMEI Check</h2>
+  <div class="sub fade-in">Only for Apple devices</div>
 
-<div class="block slide-up" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI/SN">
-<button onclick="setIMEI()">Continue</button>
-</div>
+  <!-- STEP 1 -->
+  <div class="block slide-up" id="imeiBlock">
+    <input id="imeiInput" type="text" placeholder="Enter IMEI/SN" autocapitalize="off" autocorrect="off">
+    <button onclick="setIMEI()">Continue</button>
+  </div>
 
-<div id="typeBlock"></div>
-<div id="emailBlock"></div>
-<div id="payBlock"></div>
+  <!-- STEPS -->
+  <div id="step-type"></div>
+  <div id="step-email"></div>
+  <div id="step-pay"></div>
 
 </div>
 
@@ -229,10 +197,10 @@ let imei = "";
 let type = "";
 let detectedType = "";
 
+/* STEP 1 */
 function setIMEI(){
 
 const block = document.getElementById("imeiBlock");
-
 imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
@@ -242,137 +210,109 @@ if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
 else{
 
-// ❌ shake animation
 block.classList.remove("shake");
 void block.offsetWidth;
 block.classList.add("shake");
 
 block.innerHTML = `
-<div class="error fade-in">
-❌ Invalid IMEI / SN
-</div>
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<div class="error fade-in">❌ Invalid IMEI / SN</div>
+<input id="imeiInput" type="text" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 `;
 return;
 }
 
-block.innerHTML = `
-<div class="loading fade-in">Checking device...</div>
-`;
+block.innerHTML = `<div class="loading fade-in">Checking device...</div>`;
 
 setTimeout(()=>{
 block.innerHTML = `
 <div class="value slide-up">
 ${detectedType}: <b>${imei}</b>
 <div class="label">${detectedType} detected</div>
-</div>
-`;
+</div>`;
 showType();
-}, 1200);
+},1200);
+
 }
 
+/* STEP 2 */
 function showType(){
-document.getElementById("typeBlock").innerHTML = `
+
+document.getElementById("step-type").innerHTML = `
 <div class="block slide-up">
 
-<div class="row" onclick="setType(this,'carrier')">
-Carrier status
-</div>
+<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
+<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
+<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
 
-<div class="row" onclick="setType(this,'findmy')">
-Find My iPhone
-</div>
-
-<div class="row" onclick="setType(this,'blacklist')">
-Blacklist check
-</div>
-
-</div>
-`;
+</div>`;
 }
 
 function setType(el,t){
 
 type = t;
 
-document.querySelectorAll(".row").forEach(e=>{
-e.classList.remove("active");
-});
-
+document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
 el.classList.add("active");
 
 showEmail();
 }
 
+/* STEP 3 */
 function showEmail(){
 
-if(document.getElementById("emailBlock").innerHTML) return;
-
-document.getElementById("emailBlock").innerHTML = `
+document.getElementById("step-email").innerHTML = `
 <div class="block slide-up">
-<input id="email" placeholder="Enter email" oninput="checkEmail()">
-</div>
-`;
+<input id="email" type="email" placeholder="Enter email" oninput="checkEmail()">
+</div>`;
 }
 
 function checkEmail(){
 
-const email = document.getElementById("email").value.trim();
+const emailEl = document.getElementById("email");
+const email = emailEl ? emailEl.value.trim() : "";
 
 const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 
-// ❌ если email неправильный — скрываем оплату
-if(!valid){
-document.getElementById("payBlock").innerHTML = "";
-return;
+if(valid) showPay();
+else document.getElementById("step-pay").innerHTML = "";
 }
 
-// ✅ если норм — показываем оплату
-showPay();
-
-}
-
-
+/* STEP 4 */
 function showPay(){
 
-if(document.getElementById("payBlock").innerHTML) return;
-
-document.getElementById("payBlock").innerHTML = `
+document.getElementById("step-pay").innerHTML = `
 <div class="slide-up">
-<button class="pay" onclick="payToCheck()">
+
+<button class="pay" id="payBtn" onclick="payToCheck()">
 Pay to Check $1.99
 </button>
+
 <div class="notice">
 Result will be processed within 24 hours
 </div>
-</div>
-`;
+
+</div>`;
 }
 
+/* PAYMENT */
 async function payToCheck(){
 
-const email = document.getElementById("email").value.trim();
-const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+const email = document.getElementById("email")?.value.trim();
 
-if(!imei || !type || !valid){
+if(!imei || !type || !email){
 alert("Enter valid email and all fields");
 return;
 }
 
-// 🔒 блок кнопки
-const btn = document.querySelector(".pay");
+const btn = document.getElementById("payBtn");
 if(btn){
 btn.disabled = true;
-btn.innerText = "Processing...";
+btn.innerHTML = "Processing...";
 }
 
-// 🔄 loading UI
-document.getElementById("payBlock").innerHTML = `
-<div class="loading fade-in">
-Redirecting to payment...
-</div>
-`;
+document.getElementById("step-pay").innerHTML = `
+<div class="loading fade-in">Redirecting to payment...</div>`;
 
 try{
 
@@ -386,27 +326,28 @@ type: type
 })
 });
 
-if(!res.ok) throw new Error();
-
 const data = await res.json();
 
 if(data.url){
 window.location.href = data.url;
-} else {
+}else{
 throw new Error();
 }
 
 }catch(e){
 
-// ❌ restore button
-document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="payToCheck()">
+document.getElementById("step-pay").innerHTML = `
+<div class="slide-up">
+
+<button class="pay" onclick="payToCheck()" id="payBtn">
 Pay to Check $1.99
 </button>
+
 <div class="notice">
 Connection error. Try again
 </div>
-`;
+
+</div>`;
 
 }
 
