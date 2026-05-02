@@ -18,12 +18,24 @@ body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
+overflow-x:hidden;
+}
+
+/* ===== iOS ANIMATION SYSTEM ===== */
+@keyframes fadeUp{
+from{opacity:0; transform:translateY(15px);}
+to{opacity:1; transform:translateY(0);}
 }
 
 .screen{
 padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
+animation:fadeUp 0.6s ease;
+}
+
+h2,.sub,.block,.row,button{
+animation:fadeUp 0.6s ease;
 }
 
 h2{
@@ -66,18 +78,17 @@ padding:14px;
 border:none;
 outline:none;
 font-size:15px;
+transition:0.2s;
+}
+
+input:focus{
+transform:scale(1.02);
 }
 
 .value{
 padding:14px;
 font-size:15px;
 word-break:break-all;
-}
-
-.label{
-font-size:12px;
-color:#8e8e93;
-margin-top:5px;
 }
 
 .row{
@@ -88,6 +99,11 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
+transition:0.2s;
+}
+
+.row:active{
+transform:scale(0.97);
 }
 
 .row.active{
@@ -106,6 +122,11 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
+transition:0.2s;
+}
+
+button:active{
+transform:scale(0.96);
 }
 
 .pay{
@@ -119,6 +140,7 @@ padding:12px;
 border-radius:12px;
 font-size:14px;
 margin-bottom:10px;
+animation:fadeUp 0.3s ease;
 }
 
 .loading{
@@ -126,6 +148,25 @@ text-align:center;
 padding:20px;
 font-size:14px;
 color:#8e8e93;
+animation:pulse 1.2s infinite;
+}
+
+@keyframes pulse{
+0%{opacity:0.4;}
+50%{opacity:1;}
+100%{opacity:0.4;}
+}
+
+/* ===== NEW NOTIFICATION ===== */
+.notice{
+background:rgba(10,132,255,0.08);
+border:1px solid rgba(10,132,255,0.2);
+padding:12px;
+border-radius:12px;
+font-size:13px;
+color:#0a84ff;
+margin-top:10px;
+animation:fadeUp 0.5s ease;
 }
 </style>
 </head>
@@ -214,7 +255,14 @@ document.getElementById("emailBlock").innerHTML = `
 <input id="email" placeholder="Enter email">
 </div>`;
 
-showPay();
+/* ===== ADDED NOTIFICATION ===== */
+const notice = document.createElement("div");
+notice.className = "notice";
+notice.innerText = "Your order will be processed within 24 hours";
+document.getElementById("emailBlock").appendChild(notice);
+
+/* ===== DELAY PAY BUTTON ===== */
+setTimeout(()=>showPay(), 1200);
 }
 
 /* ---------- PAY ---------- */
@@ -278,4 +326,3 @@ btn.disabled = false;
 
 </body>
 </html>
-...
