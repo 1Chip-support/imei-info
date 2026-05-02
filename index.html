@@ -320,10 +320,19 @@ function checkEmail(){
 
 const email = document.getElementById("email").value.trim();
 
-if(email.length > 5 && email.includes("@")){
+const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+
+// ❌ если email неправильный — скрываем оплату
+if(!valid){
+document.getElementById("payBlock").innerHTML = "";
+return;
+}
+
+// ✅ если норм — показываем оплату
 showPay();
+
 }
-}
+
 
 function showPay(){
 
@@ -344,11 +353,28 @@ Result will be processed within 24 hours
 async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
+const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 
-if(!imei || !type || !email){
-alert("Fill all fields");
+if(!imei || !type || !valid){
+alert("Enter valid email and all fields");
 return;
 }
+
+// 🔒 блок кнопки
+const btn = document.querySelector(".pay");
+if(btn){
+btn.disabled = true;
+btn.innerText = "Processing...";
+}
+
+// 🔄 loading UI
+document.getElementById("payBlock").innerHTML = `
+<div class="loading fade-in">
+Redirecting to payment...
+</div>
+`;
+
+try{
 
 const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
@@ -360,13 +386,30 @@ type: type
 })
 });
 
+if(!res.ok) throw new Error();
+
 const data = await res.json();
 
 if(data.url){
 window.location.href = data.url;
 } else {
-alert("Payment error");
+throw new Error();
 }
+
+}catch(e){
+
+// ❌ restore button
+document.getElementById("payBlock").innerHTML = `
+<button class="pay" onclick="payToCheck()">
+Pay to Check $1.99
+</button>
+<div class="notice">
+Connection error. Try again
+</div>
+`;
+
+}
+
 }
 
 </script>
