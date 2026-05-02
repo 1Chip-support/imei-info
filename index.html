@@ -18,39 +18,23 @@ body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
+-webkit-font-smoothing:antialiased;
 }
 
-/* ===== iOS ANIMATION (added only) ===== */
-@keyframes fadeUp{
-from{opacity:0; transform:translateY(12px);}
-to{opacity:1; transform:translateY(0);}
-}
-
+/* SCREEN */
 .screen{
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-animation:fadeUp 0.5s ease;
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
+animation:fade .35s ease;
 }
 
-.block,.row,button,.logo{
-animation:fadeUp 0.5s ease;
+@keyframes fade{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
 }
 
-/* ===== YOUR ORIGINAL STYLES ===== */
-
-h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px 0;
-}
-
-.sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
-}
-
+/* LOGO */
 .logo{
 display:flex;
 justify-content:center;
@@ -63,16 +47,46 @@ height:95px;
 border-radius:50%;
 object-fit:cover;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
+animation:pop .4s ease;
 }
 
+@keyframes pop{
+from{transform:scale(.8);opacity:0;}
+to{transform:scale(1);opacity:1;}
+}
+
+/* TEXT */
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
+text-align:center;
+}
+
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+text-align:center;
+}
+
+/* BLOCK */
 .block{
 background:#fff;
 border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.03);
+animation:slide .25s ease;
 }
 
+@keyframes slide{
+from{opacity:0;transform:translateY(8px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+/* INPUT */
 input{
 width:100%;
 padding:14px;
@@ -81,33 +95,7 @@ outline:none;
 font-size:15px;
 }
 
-.value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
-}
-
-.label{
-font-size:12px;
-color:#8e8e93;
-margin-top:5px;
-}
-
-.row{
-padding:14px;
-cursor:pointer;
-font-size:15px;
-border:1px solid #e5e5ea;
-border-radius:12px;
-margin-bottom:10px;
-background:#fff;
-}
-
-.row.active{
-border:2px solid #0a84ff;
-background:#eef5ff;
-}
-
+/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -119,12 +107,36 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
+transition:.15s ease;
+}
+
+button:active{
+transform:scale(.97);
+filter:brightness(.92);
 }
 
 .pay{
 background:#34c759;
 }
 
+/* ROW */
+.row{
+padding:14px;
+cursor:pointer;
+font-size:15px;
+border:1px solid #e5e5ea;
+border-radius:12px;
+margin-bottom:10px;
+background:#fff;
+transition:.2s;
+}
+
+.row.active{
+border:2px solid #0a84ff;
+background:#eef5ff;
+}
+
+/* ERROR */
 .error{
 background:#ff3b30;
 color:#fff;
@@ -132,8 +144,17 @@ padding:12px;
 border-radius:12px;
 font-size:14px;
 margin-bottom:10px;
+animation:shake .25s;
 }
 
+@keyframes shake{
+0%{transform:translateX(0);}
+25%{transform:translateX(-5px);}
+50%{transform:translateX(5px);}
+100%{transform:translateX(0);}
+}
+
+/* LOADING */
 .loading{
 text-align:center;
 padding:20px;
@@ -141,17 +162,26 @@ font-size:14px;
 color:#8e8e93;
 }
 
-/* ===== ADDED NOTICE ===== */
+/* VALUE */
+.value{
+padding:14px;
+font-size:15px;
+word-break:break-all;
+text-align:center;
+}
+
+/* NOTICE */
 .notice{
-margin-top:10px;
+background:#f1f5ff;
+border:1px solid #d6e4ff;
 padding:12px;
 border-radius:12px;
 font-size:13px;
-color:#0a84ff;
-background:rgba(10,132,255,0.08);
-border:1px solid rgba(10,132,255,0.2);
-animation:fadeUp 0.4s ease;
+color:#1c1c1e;
+margin-top:10px;
+animation:fade .4s ease;
 }
+
 </style>
 </head>
 
@@ -188,7 +218,7 @@ let detectedType = "";
 /* ---------- IMEI CHECK ---------- */
 function setIMEI(){
 
-imei = document.getElementById("imeiInput").value.trim();
+imei = document.getElementById("imeiInput").value.trim().toUpperCase();
 
 const isIMEI = /^\d{15}$/.test(imei);
 const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
@@ -236,43 +266,35 @@ if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
 <div class="block">
-<input id="email" placeholder="Enter email">
+<input id="email" placeholder="Enter email" oninput="emailCheck()">
 </div>`;
+}
 
-/* ===== ADDED FLOW ===== */
-setTimeout(()=>{
-const notice = document.createElement("div");
-notice.className = "notice";
-notice.innerText = "Your order will be processed within 24 hours";
-document.getElementById("emailBlock").appendChild(notice);
-},300);
+/* ---------- EMAIL LOGIC ---------- */
+function emailCheck(){
+const email = document.getElementById("email").value.trim();
+const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-/* Pay appears AFTER notice */
-setTimeout(()=>{
-showPay();
-},1200);
+if(!valid){
+document.getElementById("payBlock").innerHTML = "";
+return;
+}
+
+/* SHOW NOTICE AND PAY BUTTON */
+document.getElementById("payBlock").innerHTML = `
+<div class="notice">
+Your request will be processed within 24 hours.
+</div>
+<button class="pay" onclick="pay()">Pay $1.99</button>
+`;
 }
 
 /* ---------- PAY ---------- */
-function showPay(){
-if(document.getElementById("payBlock").innerHTML) return;
-
-document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="pay()">Pay $1.99</button>`;
-}
-
 async function pay(){
-
 const email = document.getElementById("email").value.trim();
 
 if(!imei || !type || !email){
 alert("Fill all fields");
-return;
-}
-
-const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-if(!isEmail){
-alert("Invalid email");
 return;
 }
 
@@ -281,7 +303,6 @@ btn.innerText = "Processing...";
 btn.disabled = true;
 
 try{
-
 const res = await fetch(API_URL + "/create-payment",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
@@ -307,7 +328,6 @@ alert("Server error");
 btn.innerText = "Pay $1.99";
 btn.disabled = false;
 }
-
 }
 
 </script>
