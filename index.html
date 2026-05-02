@@ -111,6 +111,12 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
+transition:all 0.2s ease;
+}
+
+.row:active{
+background:#f0f0f5;
+transform:scale(0.98);
 }
 
 .row.active{
@@ -130,6 +136,7 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
+transition:all 0.2s ease;
 }
 
 button:active{
@@ -174,6 +181,25 @@ color:#8e8e93;
 margin-top:5px;
 }
 
+.back-btn{
+background:none!important;
+color:#0a84ff!important;
+padding:8px 0!important;
+margin:0 0 10px 0!important;
+font-size:16px!important;
+text-align:left!important;
+width:auto!important;
+font-weight:500!important;
+border-radius:8px!important;
+transition:all 0.2s ease!important;
+}
+
+.back-btn:active{
+transform:scale(0.95);
+opacity:0.6;
+background:rgba(0,0,0,0.05)!important;
+}
+
 </style>
 </head>
 
@@ -210,11 +236,26 @@ let type = "";
 let detectedType = "";
 let isProcessing = false;
 
-// XSS защита - экранирование HTML
+// XSS защита
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// НАЗАД
+function goBack(){
+imei = "";
+type = "";
+detectedType = "";
+isProcessing = false;
+document.getElementById("imeiBlock").innerHTML = `
+<input id="imeiInput" type="text" placeholder="Enter IMEI/SN" autocapitalize="off" autocorrect="off">
+<button onclick="setIMEI()">Continue</button>
+`;
+document.getElementById("step-type").innerHTML = "";
+document.getElementById("step-email").innerHTML = "";
+document.getElementById("step-pay").innerHTML = "";
 }
 
 /* STEP 1 */
@@ -236,7 +277,7 @@ block.classList.add("shake");
 
 block.innerHTML = `
 <div class="error fade-in">❌ Invalid IMEI / SN</div>
-<input id="imeiInput" type="text" placeholder="Enter IMEI/SN">
+<input id="imeiInput" type="text" placeholder="Enter IMEI/SN" autocapitalize="off" autocorrect="off">
 <button onclick="setIMEI()">Continue</button>
 `;
 return;
@@ -248,6 +289,7 @@ setTimeout(()=>{
 const safeImei = escapeHtml(imei);
 const safeType = escapeHtml(detectedType);
 block.innerHTML = `
+<button class="back-btn" onclick="goBack()">← Back</button>
 <div class="value slide-up">
 ${safeType}: <b>${safeImei}</b>
 <div class="label">${safeType} detected</div>
@@ -320,7 +362,6 @@ Result will be processed within 24 hours
 /* PAYMENT */
 async function payToCheck(){
 
-// КРИТИЧНО: блокировка дублирования платежей
 if(isProcessing) return;
 isProcessing = true;
 
