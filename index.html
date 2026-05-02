@@ -4,12 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+<meta name="google-site-verification" content="HRJpJ0clkSqAImGWA64Pq8LhbVVCt9oawE6DovFubx8" />
+
 <title>1Chip</title>
 
 <link rel="icon" type="image/jpeg" href="images/logo.jpeg">
 <link rel="apple-touch-icon" href="images/logo.jpeg">
 
+<meta name="application-name" content="1Chip">
+<meta name="apple-mobile-web-app-title" content="1Chip">
+
+<meta property="og:title" content="1Chip">
+<meta property="og:site_name" content="1Chip">
+<meta property="og:description" content="Only for Apple devices">
+<meta property="og:image" content="https://imei-info.pages.dev/images/logo.jpeg">
+<meta property="og:type" content="website">
+
 <meta name="description" content="IMEI Check service for Apple devices">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a84ff">
 
 <style>
 *{box-sizing:border-box;}
@@ -18,6 +32,7 @@ body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
+overflow-x:hidden;
 }
 
 .screen{
@@ -88,6 +103,7 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
+transition:0.2s;
 }
 
 .row.active{
@@ -110,6 +126,8 @@ font-weight:600;
 
 .pay{
 background:#34c759;
+color:white;
+font-weight:600;
 }
 
 .error{
@@ -135,7 +153,7 @@ color:#8e8e93;
 <div class="screen">
 
 <div class="logo">
-<img src="images/logo.jpeg">
+<img src="images/logo.jpeg" alt="logo">
 </div>
 
 <h2>IMEI Check</h2>
@@ -160,7 +178,6 @@ let imei = "";
 let type = "";
 let detectedType = "";
 
-/* ---------- IMEI CHECK ---------- */
 function setIMEI(){
 
 imei = document.getElementById("imeiInput").value.trim();
@@ -168,64 +185,95 @@ imei = document.getElementById("imeiInput").value.trim();
 const isIMEI = /^\d{15}$/.test(imei);
 const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
 
-if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML =
-`<div class="error">Invalid IMEI / SN</div>
-<input id="imeiInput" placeholder="Enter IMEI/SN">
-<button onclick="setIMEI()">Continue</button>`;
+if(isIMEI) detectedType = "IMEI";
+else if(isSN) detectedType = "SN";
+else{
+document.getElementById("imeiBlock").innerHTML = `
+ <div class="error">
+   ❌ Invalid IMEI / SN<br>
+   IMEI = 15 digits<br>
+   SN = 10-12 letters/numbers (must contain letters)
+ </div>
+ <input id="imeiInput" placeholder="Enter IMEI/SN">
+ <button onclick="setIMEI()">Continue</button>
+`;
 return;
 }
 
-detectedType = isIMEI ? "IMEI" : "SN";
-
-document.getElementById("imeiBlock").innerHTML =
-`<div class="loading">Checking device...</div>`;
+document.getElementById("imeiBlock").innerHTML = `
+<div class="loading">Checking device...</div>
+`;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML =
-`<div class="value">${detectedType}: <b>${imei}</b></div>`;
+document.getElementById("imeiBlock").innerHTML = `
+ <div class="value">
+   ${detectedType}: <b>${imei}</b>
+   <div class="label">${detectedType} detected</div>
+ </div>
+`;
 showType();
-},1000);
+}, 1200);
 }
 
-/* ---------- TYPE ---------- */
 function showType(){
+
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
-<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
-<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
-<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
-</div>`;
+
+ <div class="row" onclick="setType(this,'carrier')">
+   Carrier status
+ </div>
+
+ <div class="row" onclick="setType(this,'findmy')">
+   Find My iPhone
+ </div>
+
+ <div class="row" onclick="setType(this,'blacklist')">
+   Blacklist check
+ </div>
+
+</div>
+`;
 }
 
 function setType(el,t){
+
 type = t;
-document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
+
+document.querySelectorAll(".row").forEach(e=>{
+e.classList.remove("active");
+});
+
 el.classList.add("active");
+
 showEmail();
 }
 
-/* ---------- EMAIL ---------- */
 function showEmail(){
+
 if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
 <div class="block">
-<input id="email" placeholder="Enter email">
-</div>`;
+ <input id="email" placeholder="Enter email">
+</div>
+`;
 
 showPay();
 }
 
-/* ---------- PAY ---------- */
 function showPay(){
+
 if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="pay()">Pay $1.99</button>`;
+<button class="pay" onclick="payToCheck()">
+ Pay to Check $1.99
+</button>
+`;
 }
 
-async function pay(){
+async function payToCheck(){
 
 const email = document.getElementById("email").value.trim();
 
@@ -234,44 +282,23 @@ alert("Fill all fields");
 return;
 }
 
-const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-if(!isEmail){
-alert("Invalid email");
-return;
-}
-
-const btn = document.querySelector(".pay");
-btn.innerText = "Processing...";
-btn.disabled = true;
-
-try{
-
-const res = await fetch(API_URL + "/create-payment",{
+const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-deviceId: imei,
-email: email,
-type: type
+body: JSON.stringify({
+ deviceId: imei,
+ email: email,
+ type: type
 })
 });
-
-if(!res.ok) throw new Error();
 
 const data = await res.json();
 
 if(data.url){
 window.location.href = data.url;
-}else{
-throw new Error();
+} else {
+alert("Payment error");
 }
-
-}catch(e){
-alert("Server error");
-btn.innerText = "Pay $1.99";
-btn.disabled = false;
-}
-
 }
 
 </script>
