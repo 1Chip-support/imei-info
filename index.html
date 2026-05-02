@@ -16,14 +16,22 @@
 
 body{
 margin:0;
-font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
-animation:fadeIn .6s ease;
+}
+
+/* Apple fade */
+.fade{
+opacity:0;
+transform:translateY(10px);
+animation:fadeIn .35s ease forwards;
 }
 
 @keyframes fadeIn{
-from{opacity:0}
-to{opacity:1}
+to{
+opacity:1;
+transform:translateY(0);
+}
 }
 
 .screen{
@@ -36,31 +44,18 @@ h2{
 font-size:22px;
 font-weight:600;
 margin:0 0 5px 0;
-animation:slideUp .5s ease;
 }
 
 .sub{
 font-size:13px;
 color:#8e8e93;
 margin-bottom:20px;
-animation:slideUp .6s ease;
-}
-
-@keyframes slideUp{
-from{opacity:0; transform:translateY(10px)}
-to{opacity:1; transform:translateY(0)}
 }
 
 .logo{
 display:flex;
 justify-content:center;
 margin-bottom:15px;
-animation:pop .7s ease;
-}
-
-@keyframes pop{
-from{transform:scale(.8); opacity:0}
-to{transform:scale(1); opacity:1}
 }
 
 .logo img{
@@ -72,18 +67,12 @@ box-shadow:0 10px 25px rgba(0,0,0,0.15);
 }
 
 .block{
-background:rgba(255,255,255,0.85);
-backdrop-filter: blur(12px);
+background:#fff;
 border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
-animation:fadeUp .4s ease;
-}
-
-@keyframes fadeUp{
-from{opacity:0; transform:translateY(12px)}
-to{opacity:1; transform:translateY(0)}
+animation:fadeIn .3s ease;
 }
 
 input{
@@ -92,7 +81,25 @@ padding:14px;
 border:none;
 outline:none;
 font-size:15px;
-background:transparent;
+}
+
+/* ERROR SHAKE */
+@keyframes shake {
+0% { transform: translateX(0); }
+20% { transform: translateX(-6px); }
+40% { transform: translateX(6px); }
+60% { transform: translateX(-4px); }
+80% { transform: translateX(4px); }
+100% { transform: translateX(0); }
+}
+
+.shake {
+animation: shake 0.35s ease;
+}
+
+.input-error{
+border:1px solid #ff3b30 !important;
+box-shadow:0 0 0 3px rgba(255,59,48,0.15);
 }
 
 .value{
@@ -109,7 +116,7 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
-transition:.25s;
+transition:.2s;
 }
 
 .row:active{
@@ -119,7 +126,6 @@ transform:scale(0.98);
 .row.active{
 border:2px solid #0a84ff;
 background:#eef5ff;
-transform:scale(1.02);
 }
 
 button{
@@ -133,22 +139,15 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-transition:.25s;
+transition:.2s;
 }
 
 button:active{
-transform:scale(0.97);
+transform:scale(0.98);
 }
 
 .pay{
 background:#34c759;
-opacity:0;
-transform:translateY(10px);
-animation:showBtn .5s ease forwards;
-}
-
-@keyframes showBtn{
-to{opacity:1; transform:translateY(0)}
 }
 
 .error{
@@ -173,16 +172,16 @@ border:1px solid #e5e5ea;
 padding:12px;
 border-radius:12px;
 font-size:13px;
-color:#3a3a3c;
+color:#1c1c1e;
 margin-bottom:12px;
-animation:fadeUp .5s ease;
+animation:fadeIn .4s ease;
 }
 </style>
 </head>
 
 <body>
 
-<div class="screen">
+<div class="screen fade">
 
 <div class="logo">
 <img src="images/logo.jpeg">
@@ -192,12 +191,13 @@ animation:fadeUp .5s ease;
 <div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI (15 digits) or Serial Number">
+<input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
 <div id="typeBlock"></div>
 <div id="emailBlock"></div>
+<div id="noticeBlock"></div>
 <div id="payBlock"></div>
 
 </div>
@@ -218,11 +218,21 @@ imei = document.getElementById("imeiInput").value.trim();
 const isIMEI = /^\d{15}$/.test(imei);
 const isSN = /^[A-Z0-9]{10,14}$/i.test(imei);
 
+/* ❌ ERROR ANIMATION */
 if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML =
+
+const block = document.getElementById("imeiBlock");
+block.classList.add("shake");
+
+block.innerHTML =
 `<div class="error">Invalid IMEI / SN</div>
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" class="input-error" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>`;
+
+setTimeout(()=>{
+block.classList.remove("shake");
+},400);
+
 return;
 }
 
@@ -241,7 +251,7 @@ showType();
 /* ---------- TYPE ---------- */
 function showType(){
 document.getElementById("typeBlock").innerHTML = `
-<div class="block">
+<div class="block fade">
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
@@ -258,31 +268,38 @@ showEmail();
 /* ---------- EMAIL ---------- */
 function showEmail(){
 document.getElementById("emailBlock").innerHTML = `
-<div class="block">
+<div class="block fade">
 <input id="email" placeholder="Enter email" oninput="checkEmail()">
-</div>
-
-<div class="notice">
-Your request will be processed within <b>24 hours</b>.
-</div>
-`;
-
+</div>`;
 }
 
-/* enable pay button only after email */
+/* ---------- EMAIL CHECK ---------- */
 function checkEmail(){
 const email = document.getElementById("email").value.trim();
 const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-if(valid && !document.getElementById("payBlock").innerHTML){
+if(valid){
+showNotice();
 showPay();
 }
 }
 
+/* ---------- NOTICE ---------- */
+function showNotice(){
+if(document.getElementById("noticeBlock").innerHTML) return;
+
+document.getElementById("noticeBlock").innerHTML = `
+<div class="notice fade">
+Your request will be processed within <b>24 hours</b>.
+</div>`;
+}
+
 /* ---------- PAY ---------- */
 function showPay(){
+if(document.getElementById("payBlock").innerHTML) return;
+
 document.getElementById("payBlock").innerHTML = `
-<button class="pay" onclick="pay()">Pay $1.99</button>`;
+<button class="pay fade" onclick="pay()">Pay $1.99</button>`;
 }
 
 async function pay(){
@@ -291,12 +308,6 @@ const email = document.getElementById("email").value.trim();
 
 if(!imei || !type || !email){
 alert("Fill all fields");
-return;
-}
-
-const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-if(!isEmail){
-alert("Invalid email");
 return;
 }
 
