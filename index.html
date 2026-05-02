@@ -111,12 +111,6 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
-transition:all 0.2s ease;
-}
-
-.row:active{
-background:#f0f0f5;
-transform:scale(0.98);
 }
 
 .row.active{
@@ -136,7 +130,6 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-transition:all 0.2s ease;
 }
 
 button:active{
@@ -181,43 +174,6 @@ color:#8e8e93;
 margin-top:5px;
 }
 
-/* Back Button Circle */
-.back-circle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #e5e5ea;
-  color: #000;
-  font-size: 32px;
-  font-weight: 600;
-  margin-right: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  border: none;
-  padding: 0;
-}
-
-.back-circle:active {
-  background: #d1d1d6;
-  transform: scale(0.92);
-}
-
-/* Value Header */
-.value-header {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.value-header > div {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
 </style>
 </head>
 
@@ -256,24 +212,14 @@ let isProcessing = false;
 
 // XSS защита
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// НАЗАД
-function goBack(){
-imei = "";
-type = "";
-detectedType = "";
-isProcessing = false;
-document.getElementById("imeiBlock").innerHTML = `
-<input id="imeiInput" type="text" placeholder="Enter IMEI/SN" autocapitalize="off" autocorrect="off">
-<button onclick="setIMEI()">Continue</button>
-`;
-document.getElementById("step-type").innerHTML = "";
-document.getElementById("step-email").innerHTML = "";
-document.getElementById("step-pay").innerHTML = "";
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 /* STEP 1 */
@@ -295,7 +241,7 @@ block.classList.add("shake");
 
 block.innerHTML = `
 <div class="error fade-in">❌ Invalid IMEI / SN</div>
-<input id="imeiInput" type="text" placeholder="Enter IMEI/SN" autocapitalize="off" autocorrect="off">
+<input id="imeiInput" type="text" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>
 `;
 return;
@@ -304,17 +250,10 @@ return;
 block.innerHTML = `<div class="loading fade-in">Checking device...</div>`;
 
 setTimeout(()=>{
-const safeImei = escapeHtml(imei);
-const safeType = escapeHtml(detectedType);
 block.innerHTML = `
 <div class="value slide-up">
-<div class="value-header">
-<button class="back-circle" onclick="goBack()">‹</button>
-<div>
-<div>${safeType}: <b>${safeImei}</b></div>
-<div class="label">${safeType} detected</div>
-</div>
-</div>
+${escapeHtml(detectedType)}: <b>${escapeHtml(imei)}</b>
+<div class="label">${escapeHtml(detectedType)} detected</div>
 </div>`;
 showType();
 },1200);
