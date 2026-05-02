@@ -210,16 +210,11 @@ let type = "";
 let detectedType = "";
 let isProcessing = false;
 
-// XSS защита
+// XSS защита - экранирование HTML
 function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return text.replace(/[&<>"']/g, m => map[m]);
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /* STEP 1 */
@@ -250,10 +245,12 @@ return;
 block.innerHTML = `<div class="loading fade-in">Checking device...</div>`;
 
 setTimeout(()=>{
+const safeImei = escapeHtml(imei);
+const safeType = escapeHtml(detectedType);
 block.innerHTML = `
 <div class="value slide-up">
-${escapeHtml(detectedType)}: <b>${escapeHtml(imei)}</b>
-<div class="label">${escapeHtml(detectedType)} detected</div>
+${safeType}: <b>${safeImei}</b>
+<div class="label">${safeType} detected</div>
 </div>`;
 showType();
 },1200);
@@ -323,6 +320,7 @@ Result will be processed within 24 hours
 /* PAYMENT */
 async function payToCheck(){
 
+// КРИТИЧНО: блокировка дублирования платежей
 if(isProcessing) return;
 isProcessing = true;
 
