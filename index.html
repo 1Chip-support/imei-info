@@ -17,54 +17,31 @@
 body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
-background:linear-gradient(180deg,#f2f2f7,#e9e9ee);
-overflow-x:hidden;
+background:#f2f2f7;
 }
 
-/* ===== MAIN SCREEN ANIMATION ===== */
 .screen{
 padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-animation: screenIn 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes screenIn{
-from{
-opacity:0;
-transform:scale(0.98) translateY(25px);
-}
-to{
-opacity:1;
-transform:scale(1) translateY(0);
-}
 }
 
 h2{
 font-size:22px;
 font-weight:600;
 margin:0 0 5px 0;
-animation: fadeUp 0.6s ease both;
 }
 
 .sub{
 font-size:13px;
 color:#8e8e93;
 margin-bottom:20px;
-animation: fadeUp 0.7s ease both;
 }
 
-/* ===== LOGO FLOAT ===== */
 .logo{
 display:flex;
 justify-content:center;
 margin-bottom:15px;
-animation: logoFloat 1s ease;
-}
-
-@keyframes logoFloat{
-from{opacity:0; transform:translateY(-10px) scale(0.9);}
-to{opacity:1; transform:translateY(0) scale(1);}
 }
 
 .logo img{
@@ -72,69 +49,52 @@ width:95px;
 height:95px;
 border-radius:50%;
 object-fit:cover;
-box-shadow:0 12px 30px rgba(0,0,0,0.18);
+box-shadow:0 10px 25px rgba(0,0,0,0.15);
 }
 
-/* ===== CARDS (GLASS iOS STYLE) ===== */
-.block, .row{
-background:rgba(255,255,255,0.75);
-backdrop-filter: blur(18px);
--webkit-backdrop-filter: blur(18px);
-border:1px solid rgba(255,255,255,0.4);
-border-radius:14px;
-box-shadow:0 10px 30px rgba(0,0,0,0.06);
-}
-
-/* ===== BLOCK ANIMATION ===== */
 .block{
+background:#fff;
+border-radius:14px;
+border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
-animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ===== INPUT ===== */
 input{
 width:100%;
 padding:14px;
 border:none;
 outline:none;
 font-size:15px;
-background:transparent;
-transition: transform 0.2s ease;
 }
 
-input:focus{
-transform:scale(1.02);
-}
-
-/* ===== VALUE TEXT ===== */
 .value{
 padding:14px;
 font-size:15px;
 word-break:break-all;
-animation: fadeUp 0.5s ease;
 }
 
-/* ===== ROW OPTIONS ===== */
+.label{
+font-size:12px;
+color:#8e8e93;
+margin-top:5px;
+}
+
 .row{
 padding:14px;
 cursor:pointer;
 font-size:15px;
+border:1px solid #e5e5ea;
+border-radius:12px;
 margin-bottom:10px;
-transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-animation: fadeUp 0.5s ease;
-}
-
-.row:active{
-transform:scale(0.97);
+background:#fff;
 }
 
 .row.active{
 border:2px solid #0a84ff;
-background:rgba(10,132,255,0.08);
+background:#eef5ff;
 }
 
-/* ===== BUTTON iOS SPRING ===== */
 button{
 width:100%;
 padding:14px;
@@ -146,22 +106,12 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-box-shadow:0 10px 25px rgba(10,132,255,0.25);
-transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-box-shadow 0.2s ease;
-animation: fadeUp 0.6s ease;
-}
-
-button:active{
-transform:scale(0.96);
 }
 
 .pay{
 background:#34c759;
-box-shadow:0 10px 25px rgba(52,199,89,0.25);
 }
 
-/* ===== ERROR ===== */
 .error{
 background:#ff3b30;
 color:#fff;
@@ -169,44 +119,40 @@ padding:12px;
 border-radius:12px;
 font-size:14px;
 margin-bottom:10px;
-animation: shake 0.3s ease;
 }
 
-@keyframes shake{
-0%{transform:translateX(0);}
-25%{transform:translateX(-4px);}
-50%{transform:translateX(4px);}
-75%{transform:translateX(-2px);}
-100%{transform:translateX(0);}
-}
-
-/* ===== LOADING PULSE ===== */
 .loading{
 text-align:center;
 padding:20px;
 font-size:14px;
 color:#8e8e93;
-animation: pulse 1.2s infinite ease-in-out;
-}
-
-@keyframes pulse{
-0%{opacity:0.4; transform:scale(0.98);}
-50%{opacity:1; transform:scale(1);}
-100%{opacity:0.4; transform:scale(0.98);}
-}
-
-/* ===== GLOBAL FADE ===== */
-@keyframes fadeUp{
-from{
-opacity:0;
-transform:translateY(15px);
-}
-to{
-opacity:1;
-transform:translateY(0);
-}
 }
 </style>
+</head>
+
+<body>
+
+<div class="screen">
+
+<div class="logo">
+<img src="images/logo.jpeg">
+</div>
+
+<h2>IMEI Check</h2>
+<div class="sub">Only for Apple devices</div>
+
+<div class="block" id="imeiBlock">
+<input id="imeiInput" placeholder="Enter IMEI/SN">
+<button onclick="setIMEI()">Continue</button>
+</div>
+
+<div id="typeBlock"></div>
+<div id="emailBlock"></div>
+<div id="payBlock"></div>
+
+</div>
+
+<script>
 
 const API_URL = "https://imei-info.onrender.com";
 
