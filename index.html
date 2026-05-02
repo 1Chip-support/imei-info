@@ -192,7 +192,7 @@ animation:fadeUp .5s ease;
 <div class="sub">Only for Apple devices</div>
 
 <div class="block" id="imeiBlock">
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI (15 digits) or Serial Number">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
@@ -216,7 +216,7 @@ function setIMEI(){
 imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
-const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
+const isSN = /^[A-Z0-9]{10,14}$/i.test(imei);
 
 if(!isIMEI && !isSN){
 document.getElementById("imeiBlock").innerHTML =
