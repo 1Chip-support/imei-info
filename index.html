@@ -33,30 +33,51 @@ margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
 overflow-x:hidden;
+-webkit-font-smoothing:antialiased;
 }
 
+/* iOS smooth screen animation */
 .screen{
 padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
+animation:fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn{
+from{opacity:0; transform:translateY(10px);}
+to{opacity:1; transform:translateY(0);}
 }
 
 h2{
 font-size:22px;
 font-weight:600;
 margin:0 0 5px 0;
+animation:slideUp 0.5s ease;
 }
 
 .sub{
 font-size:13px;
 color:#8e8e93;
 margin-bottom:20px;
+animation:slideUp 0.6s ease;
+}
+
+@keyframes slideUp{
+from{opacity:0; transform:translateY(8px);}
+to{opacity:1; transform:translateY(0);}
 }
 
 .logo{
 display:flex;
 justify-content:center;
 margin-bottom:15px;
+animation:pop 0.7s ease;
+}
+
+@keyframes pop{
+0%{transform:scale(0.8); opacity:0;}
+100%{transform:scale(1); opacity:1;}
 }
 
 .logo img{
@@ -65,14 +86,17 @@ height:95px;
 border-radius:50%;
 object-fit:cover;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
+transition:0.3s;
 }
 
 .block{
-background:#fff;
+background:rgba(255,255,255,0.85);
+backdrop-filter: blur(12px);
 border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
+animation:fadeIn 0.4s ease;
 }
 
 input{
@@ -81,6 +105,7 @@ padding:14px;
 border:none;
 outline:none;
 font-size:15px;
+background:transparent;
 }
 
 .value{
@@ -103,12 +128,18 @@ border:1px solid #e5e5ea;
 border-radius:12px;
 margin-bottom:10px;
 background:#fff;
-transition:0.2s;
+transition:0.25s cubic-bezier(.2,.8,.2,1);
+}
+
+/* iOS-like press animation */
+.row:active{
+transform:scale(0.97);
 }
 
 .row.active{
 border:2px solid #0a84ff;
 background:#eef5ff;
+transform:scale(1.01);
 }
 
 button{
@@ -122,6 +153,11 @@ margin-top:10px;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
+transition:0.25s cubic-bezier(.2,.8,.2,1);
+}
+
+button:active{
+transform:scale(0.96);
 }
 
 .pay{
@@ -137,6 +173,14 @@ padding:12px;
 border-radius:12px;
 font-size:14px;
 margin-bottom:10px;
+animation:shake 0.3s ease;
+}
+
+@keyframes shake{
+0%,100%{transform:translateX(0);}
+25%{transform:translateX(-4px);}
+50%{transform:translateX(4px);}
+75%{transform:translateX(-2px);}
 }
 
 .loading{
@@ -144,6 +188,12 @@ text-align:center;
 padding:20px;
 font-size:14px;
 color:#8e8e93;
+animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+0%,100%{opacity:0.5;}
+50%{opacity:1;}
 }
 </style>
 </head>
@@ -189,13 +239,13 @@ if(isIMEI) detectedType = "IMEI";
 else if(isSN) detectedType = "SN";
 else{
 document.getElementById("imeiBlock").innerHTML = `
- <div class="error">
-   ❌ Invalid IMEI / SN<br>
-   IMEI = 15 digits<br>
-   SN = 10-12 letters/numbers (must contain letters)
- </div>
- <input id="imeiInput" placeholder="Enter IMEI/SN">
- <button onclick="setIMEI()">Continue</button>
+<div class="error">
+❌ Invalid IMEI / SN<br>
+IMEI = 15 digits<br>
+SN = 10-12 letters/numbers (must contain letters)
+</div>
+<input id="imeiInput" placeholder="Enter IMEI/SN">
+<button onclick="setIMEI()">Continue</button>
 `;
 return;
 }
@@ -206,10 +256,10 @@ document.getElementById("imeiBlock").innerHTML = `
 
 setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML = `
- <div class="value">
-   ${detectedType}: <b>${imei}</b>
-   <div class="label">${detectedType} detected</div>
- </div>
+<div class="value">
+${detectedType}: <b>${imei}</b>
+<div class="label">${detectedType} detected</div>
+</div>
 `;
 showType();
 }, 1200);
@@ -220,17 +270,9 @@ function showType(){
 document.getElementById("typeBlock").innerHTML = `
 <div class="block">
 
- <div class="row" onclick="setType(this,'carrier')">
-   Carrier status
- </div>
-
- <div class="row" onclick="setType(this,'findmy')">
-   Find My iPhone
- </div>
-
- <div class="row" onclick="setType(this,'blacklist')">
-   Blacklist check
- </div>
+<div class="row" onclick="setType(this,'carrier')">Carrier status</div>
+<div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
+<div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
 
 </div>
 `;
@@ -255,7 +297,7 @@ if(document.getElementById("emailBlock").innerHTML) return;
 
 document.getElementById("emailBlock").innerHTML = `
 <div class="block">
- <input id="email" placeholder="Enter email">
+<input id="email" placeholder="Enter email">
 </div>
 `;
 
@@ -268,7 +310,7 @@ if(document.getElementById("payBlock").innerHTML) return;
 
 document.getElementById("payBlock").innerHTML = `
 <button class="pay" onclick="payToCheck()">
- Pay to Check $1.99
+Pay to Check $1.99
 </button>
 `;
 }
@@ -286,9 +328,9 @@ const res = await fetch(API_URL + "/create-payment", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body: JSON.stringify({
- deviceId: imei,
- email: email,
- type: type
+deviceId: imei,
+email: email,
+type: type
 })
 });
 
