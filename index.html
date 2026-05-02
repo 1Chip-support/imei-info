@@ -18,23 +18,40 @@ body{
 margin:0;
 font-family:-apple-system, BlinkMacSystemFont, "Segoe UI";
 background:#f2f2f7;
--webkit-font-smoothing:antialiased;
 }
 
-/* SCREEN */
+/* smooth Apple-like entrance */
+.fade{
+opacity:0;
+transform:translateY(10px);
+animation:fadeIn .35s ease forwards;
+}
+
+@keyframes fadeIn{
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
 .screen{
+padding:55px 16px calc(40px + env(safe-area-inset-bottom));
 max-width:420px;
 margin:0 auto;
-padding:55px 16px calc(40px + env(safe-area-inset-bottom));
-animation:fade .35s ease;
 }
 
-@keyframes fade{
-from{opacity:0;transform:translateY(10px);}
-to{opacity:1;transform:translateY(0);}
+h2{
+font-size:22px;
+font-weight:600;
+margin:0 0 5px 0;
 }
 
-/* LOGO */
+.sub{
+font-size:13px;
+color:#8e8e93;
+margin-bottom:20px;
+}
+
 .logo{
 display:flex;
 justify-content:center;
@@ -47,46 +64,17 @@ height:95px;
 border-radius:50%;
 object-fit:cover;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
-animation:pop .4s ease;
 }
 
-@keyframes pop{
-from{transform:scale(.8);opacity:0;}
-to{transform:scale(1);opacity:1;}
-}
-
-/* TEXT */
-h2{
-font-size:22px;
-font-weight:600;
-margin:0 0 5px 0;
-text-align:center;
-}
-
-.sub{
-font-size:13px;
-color:#8e8e93;
-margin-bottom:20px;
-text-align:center;
-}
-
-/* BLOCK */
 .block{
 background:#fff;
 border-radius:14px;
 border:1px solid #e5e5ea;
 padding:12px;
 margin-bottom:12px;
-box-shadow:0 5px 15px rgba(0,0,0,0.03);
-animation:slide .25s ease;
+animation:fadeIn .3s ease;
 }
 
-@keyframes slide{
-from{opacity:0;transform:translateY(8px);}
-to{opacity:1;transform:translateY(0);}
-}
-
-/* INPUT */
 input{
 width:100%;
 padding:14px;
@@ -95,31 +83,12 @@ outline:none;
 font-size:15px;
 }
 
-/* BUTTON */
-button{
-width:100%;
+.value{
 padding:14px;
-border:none;
-border-radius:14px;
 font-size:15px;
-cursor:pointer;
-margin-top:10px;
-background:#0a84ff;
-color:#fff;
-font-weight:600;
-transition:.15s ease;
+word-break:break-all;
 }
 
-button:active{
-transform:scale(.97);
-filter:brightness(.92);
-}
-
-.pay{
-background:#34c759;
-}
-
-/* ROW */
 .row{
 padding:14px;
 cursor:pointer;
@@ -131,12 +100,37 @@ background:#fff;
 transition:.2s;
 }
 
+.row:active{
+transform:scale(0.98);
+}
+
 .row.active{
 border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
-/* ERROR */
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:14px;
+font-size:15px;
+cursor:pointer;
+margin-top:10px;
+background:#0a84ff;
+color:#fff;
+font-weight:600;
+transition:.2s;
+}
+
+button:active{
+transform:scale(0.98);
+}
+
+.pay{
+background:#34c759;
+}
+
 .error{
 background:#ff3b30;
 color:#fff;
@@ -144,17 +138,8 @@ padding:12px;
 border-radius:12px;
 font-size:14px;
 margin-bottom:10px;
-animation:shake .25s;
 }
 
-@keyframes shake{
-0%{transform:translateX(0);}
-25%{transform:translateX(-5px);}
-50%{transform:translateX(5px);}
-100%{transform:translateX(0);}
-}
-
-/* LOADING */
 .loading{
 text-align:center;
 padding:20px;
@@ -162,32 +147,23 @@ font-size:14px;
 color:#8e8e93;
 }
 
-/* VALUE */
-.value{
-padding:14px;
-font-size:15px;
-word-break:break-all;
-text-align:center;
-}
-
-/* NOTICE */
+/* notification */
 .notice{
-background:#f1f5ff;
-border:1px solid #d6e4ff;
+background:#fff;
+border:1px solid #e5e5ea;
 padding:12px;
 border-radius:12px;
 font-size:13px;
 color:#1c1c1e;
-margin-top:10px;
-animation:fade .4s ease;
+margin-bottom:12px;
+animation:fadeIn .4s ease;
 }
-
 </style>
 </head>
 
 <body>
 
-<div class="screen">
+<div class="screen fade">
 
 <div class="logo">
 <img src="images/logo.jpeg">
@@ -203,6 +179,7 @@ animation:fade .4s ease;
 
 <div id="typeBlock"></div>
 <div id="emailBlock"></div>
+<div id="noticeBlock"></div>
 <div id="payBlock"></div>
 
 </div>
@@ -215,10 +192,10 @@ let imei = "";
 let type = "";
 let detectedType = "";
 
-/* ---------- IMEI CHECK ---------- */
+/* ---------- IMEI ---------- */
 function setIMEI(){
 
-imei = document.getElementById("imeiInput").value.trim().toUpperCase();
+imei = document.getElementById("imeiInput").value.trim();
 
 const isIMEI = /^\d{15}$/.test(imei);
 const isSN = /^(?=.*[A-Za-z])[A-Za-z0-9]{10,12}$/.test(imei);
@@ -240,13 +217,13 @@ setTimeout(()=>{
 document.getElementById("imeiBlock").innerHTML =
 `<div class="value">${detectedType}: <b>${imei}</b></div>`;
 showType();
-},1000);
+},900);
 }
 
 /* ---------- TYPE ---------- */
 function showType(){
 document.getElementById("typeBlock").innerHTML = `
-<div class="block">
+<div class="block fade">
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
 <div class="row" onclick="setType(this,'blacklist')">Blacklist check</div>
@@ -262,35 +239,43 @@ showEmail();
 
 /* ---------- EMAIL ---------- */
 function showEmail(){
-if(document.getElementById("emailBlock").innerHTML) return;
-
 document.getElementById("emailBlock").innerHTML = `
-<div class="block">
-<input id="email" placeholder="Enter email" oninput="emailCheck()">
+<div class="block fade">
+<input id="email" placeholder="Enter email" oninput="checkEmail()">
 </div>`;
 }
 
-/* ---------- EMAIL LOGIC ---------- */
-function emailCheck(){
+/* show pay only after valid email */
+function checkEmail(){
 const email = document.getElementById("email").value.trim();
 const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-if(!valid){
-document.getElementById("payBlock").innerHTML = "";
-return;
+if(valid){
+showNotice();
+showPay();
+}
 }
 
-/* SHOW NOTICE AND PAY BUTTON */
-document.getElementById("payBlock").innerHTML = `
-<div class="notice">
-Your request will be processed within 24 hours.
-</div>
-<button class="pay" onclick="pay()">Pay $1.99</button>
-`;
+/* ---------- NOTICE ---------- */
+function showNotice(){
+if(document.getElementById("noticeBlock").innerHTML) return;
+
+document.getElementById("noticeBlock").innerHTML = `
+<div class="notice fade">
+Your request will be processed within <b>24 hours</b>.
+</div>`;
 }
 
 /* ---------- PAY ---------- */
+function showPay(){
+if(document.getElementById("payBlock").innerHTML) return;
+
+document.getElementById("payBlock").innerHTML = `
+<button class="pay fade" onclick="pay()">Pay $1.99</button>`;
+}
+
 async function pay(){
+
 const email = document.getElementById("email").value.trim();
 
 if(!imei || !type || !email){
@@ -303,6 +288,7 @@ btn.innerText = "Processing...";
 btn.disabled = true;
 
 try{
+
 const res = await fetch(API_URL + "/create-payment",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
@@ -328,6 +314,7 @@ alert("Server error");
 btn.innerText = "Pay $1.99";
 btn.disabled = false;
 }
+
 }
 
 </script>
