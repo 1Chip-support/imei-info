@@ -21,6 +21,7 @@ background:#f2f2f7;
 -webkit-font-smoothing:antialiased;
 }
 
+/* SCREEN */
 .screen{
 max-width:420px;
 margin:0 auto;
@@ -33,6 +34,7 @@ from{opacity:0;transform:translateY(10px);}
 to{opacity:1;transform:translateY(0);}
 }
 
+/* LOGO */
 .logo{
 display:flex;
 justify-content:center;
@@ -40,7 +42,8 @@ margin-bottom:15px;
 }
 
 .logo img{
-width:95px;height:95px;
+width:95px;
+height:95px;
 border-radius:50%;
 box-shadow:0 10px 25px rgba(0,0,0,0.15);
 animation:pop .4s ease;
@@ -51,6 +54,7 @@ from{transform:scale(.8);opacity:0;}
 to{transform:scale(1);opacity:1;}
 }
 
+/* TEXT */
 h2{
 text-align:center;
 font-size:22px;
@@ -65,6 +69,7 @@ color:#8e8e93;
 margin-bottom:20px;
 }
 
+/* BLOCK */
 .block{
 background:#fff;
 border-radius:16px;
@@ -80,6 +85,7 @@ from{opacity:0;transform:translateY(8px);}
 to{opacity:1;transform:translateY(0);}
 }
 
+/* INPUT */
 input{
 width:100%;
 padding:14px;
@@ -88,6 +94,7 @@ outline:none;
 font-size:15px;
 }
 
+/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -98,13 +105,17 @@ cursor:pointer;
 background:#0a84ff;
 color:#fff;
 font-weight:600;
-transition:.2s;
+transition:.15s ease;
 }
 
-button:active{transform:scale(.98);}
+button:active{
+transform:scale(.97);
+filter:brightness(.92);
+}
 
 .pay{background:#34c759;}
 
+/* ROW */
 .row{
 padding:14px;
 border:1px solid #e5e5ea;
@@ -119,14 +130,7 @@ border:2px solid #0a84ff;
 background:#eef5ff;
 }
 
-.info{
-text-align:center;
-font-size:13px;
-color:#8e8e93;
-margin-top:8px;
-animation:fade 1s ease;
-}
-
+/* INFO */
 .notice{
 background:#f1f5ff;
 border:1px solid #d6e4ff;
@@ -138,12 +142,14 @@ margin-top:10px;
 animation:fade .4s ease;
 }
 
+/* LOADING */
 .loading{
 text-align:center;
 padding:20px;
 color:#8e8e93;
 }
 
+/* ERROR */
 .error{
 background:#ff3b30;
 color:#fff;
@@ -160,8 +166,6 @@ animation:shake .25s;
 100%{transform:translateX(0);}
 }
 
-.hidden{display:none;}
-
 </style>
 </head>
 
@@ -177,7 +181,7 @@ animation:shake .25s;
 <div class="sub">Only for Apple devices</div>
 
 <div id="imeiBlock" class="block">
-<input id="imeiInput" placeholder="Enter IMEI/SN">
+<input id="imeiInput" placeholder="Enter IMEI / SN">
 <button onclick="setIMEI()">Continue</button>
 </div>
 
@@ -189,39 +193,41 @@ animation:shake .25s;
 
 <script>
 
-const API_URL="https://imei-info.onrender.com";
+const API_URL = "https://imei-info.onrender.com";
 
-let imei="",type="";
+let imei = "";
+let type = "";
 
-/* ---------- IMEI ---------- */
+/* ---------- IMEI / SN CHECK ---------- */
 function setIMEI(){
 
-imei=document.getElementById("imeiInput").value.trim();
+imei = document.getElementById("imeiInput").value.trim().toUpperCase();
 
-const isIMEI=/^\d{15}$/.test(imei);
-const isSN=/^[A-Z0-9]{10,12}$/.test(imei);
+const isIMEI = /^\d{15}$/.test(imei);
+const isSN = /^[A-Z0-9]{10,17}$/.test(imei);
 
 if(!isIMEI && !isSN){
-document.getElementById("imeiBlock").innerHTML=`
+document.getElementById("imeiBlock").innerHTML = `
 <div class="error">Invalid IMEI / SN</div>
 <input id="imeiInput" placeholder="Enter IMEI/SN">
 <button onclick="setIMEI()">Continue</button>`;
 return;
 }
 
-document.getElementById("imeiBlock").innerHTML=
+document.getElementById("imeiBlock").innerHTML =
 `<div class="loading">Checking device...</div>`;
 
 setTimeout(()=>{
-document.getElementById("imeiBlock").innerHTML=
-`<div>${isIMEI?"IMEI":"SN"}: <b>${imei}</b></div>`;
+document.getElementById("imeiBlock").innerHTML =
+`<div>${isIMEI ? "IMEI" : "SN"}: <b>${imei}</b></div>`;
 showType();
 },800);
+
 }
 
 /* ---------- TYPE ---------- */
 function showType(){
-document.getElementById("typeBlock").innerHTML=`
+document.getElementById("typeBlock").innerHTML = `
 <div class="block">
 <div class="row" onclick="setType(this,'carrier')">Carrier status</div>
 <div class="row" onclick="setType(this,'findmy')">Find My iPhone</div>
@@ -230,7 +236,7 @@ document.getElementById("typeBlock").innerHTML=`
 }
 
 function setType(el,t){
-type=t;
+type = t;
 document.querySelectorAll(".row").forEach(e=>e.classList.remove("active"));
 el.classList.add("active");
 showEmail();
@@ -239,65 +245,73 @@ showEmail();
 /* ---------- EMAIL ---------- */
 function showEmail(){
 
-document.getElementById("emailBlock").innerHTML=`
+document.getElementById("emailBlock").innerHTML = `
 <div class="block">
-<input id="email" placeholder="Enter email" oninput="emailNotice()">
+<input id="email" placeholder="Enter email" oninput="emailCheck()">
 </div>`;
+
 }
 
-/* ---------- NOTICE AFTER EMAIL ---------- */
-function emailNotice(){
+/* ---------- EMAIL LOGIC ---------- */
+function emailCheck(){
 
-const email=document.getElementById("email").value.trim();
-const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const email = document.getElementById("email").value.trim();
+const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 if(!valid){
-document.getElementById("payBlock").innerHTML="";
+document.getElementById("payBlock").innerHTML = "";
 return;
 }
 
-document.getElementById("payBlock").innerHTML=`
+/* SHOW NOTICE FIRST */
+document.getElementById("payBlock").innerHTML = `
 <div class="notice">
 Your request will be processed within 24 hours.
 </div>
-
 <button class="pay" onclick="pay(this)">Pay $1.99</button>
 `;
+
 }
 
 /* ---------- PAY ---------- */
 async function pay(btn){
 
-const email=document.getElementById("email").value.trim();
+const email = document.getElementById("email").value.trim();
 
-if(!imei||!type||!email){
+if(!imei || !type || !email){
 alert("Fill all fields");
 return;
 }
 
-btn.disabled=true;
-btn.innerText="Processing...";
+btn.disabled = true;
+btn.innerText = "Processing...";
 
 try{
 
-const res=await fetch(API_URL+"/create-payment",{
+const res = await fetch(API_URL+"/create-payment",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({deviceId:imei,email,type})
+body:JSON.stringify({
+deviceId: imei,
+email: email,
+type: type
+})
 });
 
 if(!res.ok) throw new Error();
 
-const data=await res.json();
+const data = await res.json();
 
 if(data.url){
-window.location.href=data.url;
+window.location.href = data.url;
 }else throw new Error();
 
 }catch(e){
+
 alert("Server error");
-btn.disabled=false;
-btn.innerText="Pay $1.99";
+btn.disabled = false;
+btn.innerText = "Pay $1.99";
+
 }
 
 }
